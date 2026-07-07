@@ -200,6 +200,7 @@ entities:
       power_off_payload: "3b 24 00 00 00 00 00 00 00 32 00 00  # chk 0x91"
       hsv_payload:       "3b a1 HH SS VV 00 00 00 00 00 00 00"
       settings_query_payload: "81 8a 8b  # chk 0x96, cmdid 0x0a -> notification = identity probe"
+      white_payload: "3b b1 00 00 00 TT BB 00 00 00 00 00  # REPORTED: TT temp 0-100 warm->cool, BB bright 0-100; byte positions hypothesized from capture 3b b1 00 00 00 1b 36 .. 3d — verify per roadmap F8 AC3"
       effect_payload:    "38 EE SS BB  # fw 0x53; effect 01-71, speed/bright 1-64"
     power_magic: {on: 0x23, off: 0x24}
     effects: 0x01-0x71 (fw 0x53) or 0x01-0x64 (fw 0x56)

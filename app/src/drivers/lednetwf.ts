@@ -53,6 +53,25 @@ function hsvFrame(state: ChannelState): Uint8Array {
   );
 }
 
+/**
+ * White mode (dedicated white LED). Interpreted from the capture
+ * `3b b1 00 00 00 1b 36 … 3d` (checksum-consistent): bytes 5/6 read as
+ * temperature and brightness, both 0-100. Byte positions are a
+ * hypothesis — knowledge-graph confidence `reported` until a lamp
+ * confirms (roadmap F8 AC3).
+ */
+function whiteFrame(state: ChannelState): Uint8Array {
+  return wrap(
+    [
+      0x3b, 0xb1, 0, 0, 0,
+      toRange(state["whiteTemp"] ?? 0.5, 100),
+      toRange(state["whiteBright"] ?? 0, 100),
+      0, 0, 0, 0, 0,
+    ],
+    0x0b,
+  );
+}
+
 /** LED-settings query `81 8a 8b` (chk 0x96) — read-only, answered on ff02. */
 function settingsQuery(): Uint8Array {
   return wrap([0x81, 0x8a, 0x8b], 0x0a);
@@ -91,13 +110,16 @@ export const lednetwfDriver: Driver = {
       label: this.label,
       channels: [
         { id: "power", label: "Power", kind: "power", steps: 2 },
-        { id: "hue", label: "Hue", kind: "hue", steps: 180 },
-        { id: "saturation", label: "Saturation", kind: "sat", steps: 101 },
-        { id: "value", label: "Value (brightness)", kind: "val", steps: 101 },
+        { id: "hue", label: "Hue", kind: "hue", steps: 180, exclusiveGroup: "color" },
+        { id: "saturation", label: "Saturation", kind: "sat", steps: 101, exclusiveGroup: "color" },
+        { id: "value", label: "Value (brightness)", kind: "val", steps: 101, exclusiveGroup: "color" },
+        { id: "whiteTemp", label: "White temp (warm→cool)", kind: "cw", steps: 101, exclusiveGroup: "white" },
+        { id: "whiteBright", label: "White brightness", kind: "w", steps: 101, exclusiveGroup: "white" },
       ],
       notes: [
         "Native HSV device: hue has 180 real steps (stored as hue/2), saturation and value 101 each — shown honestly instead of a fake 8-bit RGB.",
-        "Effects, white-temperature and per-pixel smear exist on some firmware — not exposed yet; see the protocol compendium.",
+        "Dedicated white LED: White brightness > 0 switches the lamp to white mode; 0 returns to color. White byte layout is unverified — if it misbehaves, report what happened.",
+        "Effects and per-pixel smear exist on some firmware — not exposed yet; see the protocol compendium.",
       ],
     };
   },
@@ -105,7 +127,11 @@ export const lednetwfDriver: Driver = {
   encode(state: ChannelState): Uint8Array[] {
     const on = (state["power"] ?? 1) >= 0.5;
     const frames: Uint8Array[] = [powerFrame(on)];
-    if (on) frames.push(hsvFrame(state));
+    if (on) {
+      // White and color are exclusive modes on this hardware: any white
+      // brightness engages the dedicated white LED, zero returns to HSV.
+      frames.push((state["whiteBright"] ?? 0) > 0 ? whiteFrame(state) : hsvFrame(state));
+    }
     return frames;
   },
 

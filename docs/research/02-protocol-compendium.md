@@ -101,6 +101,7 @@ lamps). Vendor app: Zengge / Magic Home family. **Field sighting
 | Power on | `00 04 80 00 00 0d 0e 0b · 3b 23 00 00 00 00 00 00 00 32 00 00 · 90` |
 | Power off | `00 5b 80 00 00 0d 0e 0b · 3b 24 00 00 00 00 00 00 00 32 00 00 · 91` |
 | HSV color (fw 0x53) | `00 05 80 00 00 0d 0e 0b · 3b a1 HH SS VV 00 00 00 00 00 00 00 · chk` |
+| White mode (**reported**) | `3b b1 00 00 00 TT BB 00 00 00 00 00 · chk` — interpreted from capture `3b b1 00 00 00 1b 36 … 3d` (checksum-consistent); TT = temp warm→cool 0–100, BB = brightness 0–100. Byte positions are a hypothesis pending hardware test (roadmap F8 AC3). |
 | LED-settings query | `00 35 80 00 00 04 05 0a · 81 8a 8b · 96` (response arrives on ff02 → identity probe) |
 | Effect (fw 0x53) | `00 06 80 00 00 04 05 0b · 38 EE SS BB` (effect 0x01–0x71, speed/brightness 1–0x64) |
 

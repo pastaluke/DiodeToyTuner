@@ -44,13 +44,18 @@ button.learning { outline: 2px solid var(--accent); }
   background: var(--panel);
   border-radius: 10px;
   padding: 0.8rem 1rem;
-  display: grid;
-  grid-template-columns: 11rem 1fr auto;
-  gap: 0.4rem 1rem;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
+.strip-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
 .strip label { font-weight: 600; }
-.strip input[type="range"] { width: 100%; accent-color: var(--accent); }
+.view-select { font-size: 0.8rem; }
+.strip input[type="range"] {
+  width: 100%;
+  min-height: 28px;      /* touch target + visibility on phones (F6) */
+  accent-color: var(--accent);
+}
 .kind-r input[type="range"] { accent-color: #ff5c5c; }
 .kind-g input[type="range"] { accent-color: #5cff7e; }
 .kind-b input[type="range"] { accent-color: #5c9dff; }
@@ -58,13 +63,83 @@ button.learning { outline: 2px solid var(--accent); }
 .kind-hue input[type="range"] { accent-color: #c95cff; }
 .kind-sat input[type="range"] { accent-color: #ff5cd6; }
 .kind-val input[type="range"] { accent-color: #ffd75c; }
-.fine { display: flex; gap: 0.4rem; }
+.fine { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .fine button { font-size: 0.8rem; padding: 0.25rem 0.5rem; }
 .readout {
-  grid-column: 2 / 4;
   font-family: ui-monospace, monospace;
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+/* Hue wheel view (F7) */
+.wheel {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  align-self: center;
+  position: relative;
+  touch-action: none;
+  cursor: crosshair;
+  background: conic-gradient(
+    red, yellow, lime, cyan, blue, magenta, red
+  );
+  /* donut: hollow center so it reads as a dial, not a disc */
+  -webkit-mask: radial-gradient(circle, transparent 42px, black 43px);
+  mask: radial-gradient(circle, transparent 42px, black 43px);
+}
+.wheel-dot {
+  position: absolute;
+  left: calc(50% - 7px);
+  top: calc(50% - 7px);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #000;
+  pointer-events: none;
+}
+.steps-input { width: 7rem; font-family: ui-monospace, monospace; }
+
+/* Profile + binding editor (F1, F5) */
+.profile { margin-top: 1.4rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.profile h2 { font-size: 1rem; margin: 0; }
+.profile-name {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #33334a;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  min-width: 10rem;
+}
+.b-control { color: var(--accent); }
+.b-arrow { color: var(--muted); }
+.b-sens { width: 4.5rem; }
+.b-mods { display: inline-flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+.mod-chip {
+  display: inline-flex;
+  gap: 0.2rem;
+  align-items: center;
+  background: #26263a;
+  border-radius: 5px;
+  padding: 0.1rem 0.3rem;
+}
+.mod-scale { width: 3.2rem; }
+button.tiny { font-size: 0.75rem; padding: 0.15rem 0.4rem; }
+.binding select, .binding input {
+  background: #26263a;
+  color: var(--text);
+  border: 1px solid #33334a;
+  border-radius: 5px;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.8rem;
+}
+
+/* Portrait / narrow screens (F6) */
+@media (max-width: 700px) {
+  #app { padding: 1rem 0.7rem 3rem; }
+  .binding { flex-wrap: wrap; gap: 0.35rem; }
+  .bar { gap: 0.5rem; }
+  .wheel { width: 200px; height: 200px; }
 }
 
 .notes { color: var(--muted); font-size: 0.85rem; }
@@ -72,7 +147,7 @@ button.learning { outline: 2px solid var(--accent); }
 .bindings h2 { font-size: 1rem; margin: 1.2rem 0 0.4rem; }
 .binding {
   display: flex;
-  justify-content: space-between;
+  gap: 0.5rem;
   align-items: center;
   background: var(--panel);
   border-radius: 6px;
