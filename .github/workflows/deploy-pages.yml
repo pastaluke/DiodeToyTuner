@@ -6,7 +6,13 @@ name: Deploy to GitHub Pages
 # works from Chrome/Edge on desktop and Android.
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      # TEMP: repo's default branch is still the initial working branch, and
+      # the auto-created github-pages environment only allows the default
+      # branch to deploy. Remove this once the default branch is main
+      # (Settings → Branches).
+      - claude/led-control-app-research-fu7lio
   workflow_dispatch:
 
 permissions:
