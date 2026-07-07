@@ -15,9 +15,10 @@ const SVC_FFE0 = "0000ffe0-0000-1000-8000-00805f9b34fb";
 const CHR_FFE1 = "0000ffe1-0000-1000-8000-00805f9b34fb";
 const CHR_FFE2 = "0000ffe2-0000-1000-8000-00805f9b34fb";
 
-// Name table from dave-code-ruiz/elkbledom (19+ observed models).
+// Name table from dave-code-ruiz/elkbledom (19+ observed models), plus
+// ELK-LAMPL (lamp-form devices incl. sunset lamps; b1scoito/elk-led-controller).
 const NAME_PREFIXES = [
-  "ELK-BLE", "ELK-BT", "ELK-BULB", "MELK", "LEDBLE", "LED-",
+  "ELK-BLE", "ELK-BT", "ELK-BULB", "ELK-LAMP", "MELK", "LEDBLE", "LED-",
   "XROCKER", "JACKYLED", "DMRRBA",
 ];
 

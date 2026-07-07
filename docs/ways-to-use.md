@@ -19,6 +19,12 @@ levels:
 | **SP110E** pixel controller (LED Hue app) | 🧪 theoretical | Driver shipped incl. the required init handshake. Whole-strip control only (BLE protocol has no per-pixel). |
 | **Zengge / Magic Home BLE** (LEDnetWF names) | ❌ not yet | Next driver target (per-pixel "smear" command is the prize). |
 | **Magic Home Wi-Fi**, **WLED** devices | ❌ not yet | Browsers can't reach them directly; needs the planned local bridge. |
+| **Sunset lamp projectors** ("APP control") | 🎲 depends | Same controllers as strips behind a lens — ELK-BLEDOM / Triones units work in theory; **Smart Life (Tuya)** units are out of reach (encrypted). See [research/07-sunset-lamp-survey.md](research/07-sunset-lamp-survey.md). |
+
+**Device won't show up or connect?** Use **🔍 Diagnose a device** in the
+app: it connects read-only to *any* BLE device, reports its name and GATT
+layout, and scores it against every driver. Paste the report into a GitHub
+issue — most new-family support starts from exactly that report.
 
 ## Running the app
 

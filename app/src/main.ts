@@ -10,6 +10,7 @@ import { BleDevice } from "./transport/ble";
 import { GamepadSource } from "./input/gamepad";
 import { HidSource } from "./input/hid";
 import { MappingEngine, type InputEvent } from "./input/mapping";
+import { runDiagnosis } from "./diagnostics";
 
 const app = document.getElementById("app")!;
 
@@ -17,6 +18,7 @@ let ble: BleDevice | null = null;
 let capability: DeviceCapability | null = null;
 let state: ChannelState = {};
 let learnTarget: string | null = null;
+let diagnosisReport: string | null = null;
 
 const mapping = new MappingEngine(
   (channelId, value) => setChannel(channelId, value),
@@ -194,6 +196,20 @@ function render(): void {
     blinkBtn.onclick = () => void blinkTest();
     bar.append(blinkBtn);
   }
+  const diagBtn = el("button", "", "🔍 Diagnose a device") as HTMLButtonElement;
+  diagBtn.onclick = () => {
+    setStatus("Diagnosing… pick ANY device in the chooser (read-only, no commands sent).");
+    void runDiagnosis()
+      .then((report) => {
+        diagnosisReport = report;
+        setStatus("Diagnosis complete — report below. Copy it into a GitHub issue to get your device supported.");
+        render();
+      })
+      .catch((err: unknown) => {
+        setStatus(`Diagnosis failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+  };
+  bar.append(diagBtn);
   if (hid.supported) {
     const hidBtn = el("button", "", "＋ knob / HID device") as HTMLButtonElement;
     hidBtn.onclick = () =>
@@ -275,6 +291,21 @@ function render(): void {
       el("p", "small", "Chromium-based browser required (Web Bluetooth). HTTPS or localhost only."),
     );
     app.append(empty);
+  }
+
+  if (diagnosisReport) {
+    const diag = el("div", "diagnosis");
+    diag.append(el("h2", "", "Device diagnosis"));
+    const pre = el("pre", "", diagnosisReport);
+    const copy = el("button", "", "Copy report") as HTMLButtonElement;
+    copy.onclick = () => void navigator.clipboard.writeText(diagnosisReport ?? "");
+    const close = el("button", "", "Dismiss") as HTMLButtonElement;
+    close.onclick = () => {
+      diagnosisReport = null;
+      render();
+    };
+    diag.append(pre, copy, close);
+    app.append(diag);
   }
 
   const pads = el("div", "pads");

@@ -83,3 +83,16 @@ button.learning { outline: 2px solid var(--accent); }
 .small { font-size: 0.85rem; }
 
 .pads { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+.diagnosis { margin-top: 1.5rem; }
+.diagnosis h2 { font-size: 1rem; margin: 0 0 0.4rem; }
+.diagnosis pre {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  user-select: text;
+}
+.diagnosis button { margin-right: 0.5rem; }

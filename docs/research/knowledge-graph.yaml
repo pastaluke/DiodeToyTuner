@@ -94,6 +94,42 @@ entities:
       - https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012
       - https://github.com/roslovets/SP110E
 
+  - id: family.bj_led
+    type: device-family
+    description: BJ_LED — cheapest AliExpress tier BLE strips/lamps (MohuanLED app);
+      also appears inside some sunset lamps
+    advertised_name: BJ_LED
+    confidence: reported
+    status: driver-not-started; distill protocol from source before coding
+    source: [https://github.com/8none1/bj_led]
+
+  - id: family.ideal_led
+    type: device-family
+    description: iDeal LED — BLE strips with a lightly encrypted (fully RE'd)
+      protocol
+    confidence: reported
+    status: driver-not-started; att_protocol.md upstream is thorough
+    source: [https://github.com/8none1/idealLED]
+
+  - id: family.tuya_ble
+    type: device-family
+    description: Smart Life / Tuya BLE modules (many sunset lamps ship this) —
+      authenticated + encrypted sessions keyed via Tuya cloud pairing
+    reachable_from_browser: false
+    verdict: out of scope; document honestly, do not fight the crypto
+    confidence: community-verified
+    source: [https://www.galacticnight.com.au/blogs/news/how-to-connect-sunset-lamp-to-app-unlock-easy-ambience-control-2025]
+
+  - id: family.ledble_lamp
+    type: device-family
+    description: LEDBLE-class devices using the "LED Lamp" app; related led-ble
+      protocol class covers QHM- names per Home Assistant LED BLE reports
+    confidence: reported
+    status: candidate; needs a live Diagnose report to pick the protocol variant
+    source:
+      - https://github.com/8none1/ledble-ledlamp
+      - https://www.home-assistant.io/integrations/led_ble/
+
   - id: family.magichome2_ble
     type: device-family
     description: MagicHome2/SurpLife/YIQU BLE string lights
@@ -316,7 +352,33 @@ relations:
   # shared heritage hint (power magics 0x23/0x24 shared)
   - [protocol.lednetwf, shares_magic_numbers_with, protocol.triones]
 
+observations:
+  - id: observation.sunset_lamps_not_one_chip
+    text: App-controlled sunset projection lamps are white-label BLE LED
+      controllers behind a lens; they split across ELK-BLEDOM (Lotus
+      Lantern/duoCo), Triones (HappyLighting), Tuya BLE (Smart Life),
+      BJ_LED (MohuanLED), and iDeal LED — no single chip. The listing never
+      says which; only the manual's app name (pre-purchase) or a GATT
+      inspection (post-purchase) identifies the family.
+    doc: docs/research/07-sunset-lamp-survey.md
+  - id: observation.elk_lampl_name
+    text: ELK family includes ELK-LAMPL advertised name (lamp-form factor);
+      added to chooser prefixes as ELK-LAMP.
+    source: [https://github.com/b1scoito/elk-led-controller]
+
 decisions:
+  - id: decision.diagnose_mode
+    text: The app ships a read-only Diagnose mode (acceptAllDevices + broad
+      candidate optionalServices) that reports name/GATT/driver-scores,
+      because unknown name variants otherwise fail invisibly in the filtered
+      chooser. Diagnose never writes. Candidate service list lives in
+      app/src/diagnostics.ts and must stay in sync with this graph.
+    justified_by: [observation.sunset_lamps_not_one_chip, platform.web_bluetooth]
+  - id: decision.tuya_out_of_scope
+    text: Tuya/Smart Life BLE devices are out of scope (authenticated,
+      cloud-keyed encryption). Say so in user-facing docs rather than
+      implying future support.
+    justified_by: [family.tuya_ble]
   - id: decision.chromium_first
     text: Target Chromium via Web Bluetooth; no polyfills for Firefox/Safari.
       Native bridge (transport.bridge / Tauri) is the multi-browser path.
