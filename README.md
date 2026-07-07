@@ -72,6 +72,7 @@ But they answer different questions:
 │       └── ui/              # Minimal, honest UI
 ├── docs/
 │   ├── architecture.md      # How the pieces fit; how to add a driver
+│   ├── ways-to-use.md       # Verified & theoretical setups incl. cheapest DIY build
 │   └── research/            # ← Research corpus. START HERE for agents.
 │       ├── 00-INDEX.md
 │       ├── 01-ecosystem-survey.md

@@ -268,6 +268,16 @@ entities:
     type: hardware-product
     role: community-standard open addressable controller for WLED
     source: [https://quinled.info/]
+  - id: hw.bowl_lamp_sp110e
+    type: hardware-recipe
+    cost_usd: 13-17
+    status: theoretical   # flip alongside docs/ways-to-use.md when built
+    description: cheapest full-stack demo for users with no compatible
+      device -- SP110E (USB version) + ~6px SK6812 RGBW segment under a
+      diffuse bowl; USB charger or power bank
+    quirk: one-time IC type (SK6812_RGBW) + pixel count setup currently
+      requires vendor LED Hue app (config tier not in our UI yet, M5a)
+    doc: docs/ways-to-use.md
   - id: hw.rp2040_encoder_knob
     type: hardware-recipe
     cost_usd: ~7
