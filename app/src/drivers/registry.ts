@@ -5,8 +5,9 @@
 import { CONFIDENCE_WRITE_THRESHOLD, type Driver, type IdentityEvidence } from "./driver";
 import { elkBledomDriver } from "./elk-bledom";
 import { trionesDriver } from "./triones";
+import { sp110eDriver } from "./sp110e";
 
-export const drivers: Driver[] = [elkBledomDriver, trionesDriver];
+export const drivers: Driver[] = [elkBledomDriver, trionesDriver, sp110eDriver];
 
 /** Stage 0: union of every driver's chooser filters + declared services.
  *  optionalServices must list everything any driver might touch — Web

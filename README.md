@@ -118,10 +118,12 @@ except on `localhost`).
 
 ## Status
 
-Early scaffold. Working: research corpus, capability model, ELK-BLEDOM and
-Triones drivers, gamepad input source, mapping engine core, minimal UI.
-See [`docs/research/00-INDEX.md`](docs/research/00-INDEX.md) for what's known
-and [`docs/architecture.md`](docs/architecture.md) for how to extend.
+Early but functional. Working: research corpus + knowledge graph, capability
+model, **ELK-BLEDOM, Triones, and SP110E drivers**, gamepad + WebHID input
+sources, mapping engine core, reference RP2040 encoder-knob firmware
+([`hardware/encoder-knob/`](hardware/encoder-knob/)), CI. See
+[`docs/research/00-INDEX.md`](docs/research/00-INDEX.md) for what's known and
+[`docs/architecture.md`](docs/architecture.md) for how to extend.
 
 ## License
 

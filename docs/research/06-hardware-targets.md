@@ -12,12 +12,15 @@ The core audience. Supported/planned via BLE drivers:
 | "Bluetooth LED strip" controllers bundled with 5050 RGB strips | Amazon/AliExpress, dozens of brands | ELK-BLEDOM | grouped R,G,B (8-bit) + coarse brightness (101 steps) |
 | RGBW BLE bulbs / strip controllers | same | Triones/HappyLighting | grouped R,G,B (8-bit) XOR W (8-bit) |
 | Zengge BLE rings/fairy strings/strips | same | LEDnetWF | HSV path (180/101/101 steps); per-pixel via "smear" on addressable models |
-| SP110E pixel controller | ~$5 | SP110E | **per-diode** on addressable strips; configurable chip/order/count |
+| SP110E pixel controller | ~$5 | SP110E | whole-strip R,G,B (8-bit) + **true 256-step brightness** + white channel on RGBW ICs |
 
 Practical guidance for buyers wanting *maximum* tunability per dollar:
-**SP110E + WS2812B/SK6812 strip** is the precision king among sealed BLE
-gear — individually addressable diodes, 8-bit per subpixel, and SK6812 RGBW
-adds a real white diode per pixel.
+**SP110E + SK6812 RGBW strip** gives the finest intensity path among sealed
+BLE gear (256-step brightness × 8-bit color, plus a real white diode) —
+though whole-strip only: the BLE protocol has no per-pixel streaming
+(corrected 2026-07-07). For per-pixel on sealed hardware, LEDnetWF
+addressable models (smear command) are the target; for per-pixel done
+properly, go Tier 2.
 
 ## Tier 1 — Solder-a-little: analog strips on open boards (~$8–20)
 

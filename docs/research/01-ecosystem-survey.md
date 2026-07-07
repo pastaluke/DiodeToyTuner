@@ -84,9 +84,9 @@ with arbitrary physical-input mapping":
 ### SP110E and SPxxx pixel controllers — `https://github.com/roslovets/SP110E`
 - ~$5 BLE controllers for *addressable* strips (WS2812 etc.). Protocol
   reverse-engineered from the "LED Hue" app (14 four-byte commands, service
-  FFE0/char FFE1). Python asyncio driver + HA integration exist. This family
-  is our bridge from "grouped RGB channels" to "individual diode" control on
-  sealed hardware.
+  FFE0/char FFE1). Python asyncio driver + HA integration exist. Whole-strip
+  control only (no per-pixel over BLE — corrected 2026-07-07), but the
+  brightness path is a true 256 steps and RGBW ICs get a real white channel.
 
 ### HID Remapper — `https://www.remapper.org`
 - Open source RP2040-based universal input remapper, *configured entirely via

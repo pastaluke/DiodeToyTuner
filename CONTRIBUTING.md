@@ -23,8 +23,8 @@ knowledge graph entities → compendium entry → driver (data + pure `encode()`
 
 Good first drivers, in order of research-readiness:
 
-- **SP110E** (per-pixel! protocol fully documented, needs init sequence)
-- **Zengge LEDnetWF** (framing documented; HSV path)
+- **Zengge LEDnetWF** (framing documented; HSV path; per-pixel "smear"
+  command on addressable models — the current per-diode frontier)
 - **MagicHome2 BLE** (distill from rabidpaperclip/magichome2-ble first)
 
 ## Dev setup

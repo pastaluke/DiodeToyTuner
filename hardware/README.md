@@ -1,14 +1,13 @@
 # hardware/
 
-Open hardware companions to the app. Nothing here yet — the plan and design
-rules live in [`docs/research/06-hardware-targets.md`](../docs/research/06-hardware-targets.md)
+Open hardware companions to the app. Plan and design rules live in
+[`docs/research/06-hardware-targets.md`](../docs/research/06-hardware-targets.md)
 (Tier 4).
-
-Planned boards:
 
 | Board | What it is | Status |
 |---|---|---|
-| `knob-one/` | RP2040 + 1–4 EC11 rotary encoders presenting USB HID; the canonical "encoder wheel light toy" input. | planned |
+| [`encoder-knob/`](encoder-knob/) | Breadboard build: RP2040 + EC11 encoder(s) → USB HID dial read by the app via WebHID. CircuitPython firmware included. | **working** |
+| `knob-one/` | The `encoder-knob` circuit as a fab-ready PCB (1–4 encoders, optional OLED). | planned |
 | `quad-mosfet-hat/` | 4-channel MOSFET carrier for ESP32 devkits (analog 12/24 V RGB(W) strips) with screw terminals. | planned |
 
 Rules when contributing a board:

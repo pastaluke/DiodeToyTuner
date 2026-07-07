@@ -18,6 +18,7 @@ const MAX_FLASHES_PER_WINDOW = 3; // conservative; cf. WCAG 3-flash threshold
 export class BleDevice {
   private writeCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
   private notifyCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
+  private auxCharacteristics = new Map<string, BluetoothRemoteGATTCharacteristic>();
   private pending: ChannelState | null = null;
   private lastSent: ChannelState = {};
   private flashTimes: number[] = [];
@@ -46,6 +47,13 @@ export class BleDevice {
         const writeUuid = this.driver.writeChar[svcUuid];
         if (writeUuid && !this.writeCharacteristic) {
           this.writeCharacteristic = await service.getCharacteristic(writeUuid);
+        }
+        for (const auxUuid of this.driver.auxChars?.[svcUuid] ?? []) {
+          try {
+            this.auxCharacteristics.set(auxUuid, await service.getCharacteristic(auxUuid));
+          } catch {
+            // aux char absent on this unit — postConnect may still cope
+          }
         }
         const notifyUuid = this.driver.notifyChar?.[svcUuid];
         if (notifyUuid && !this.notifyCharacteristic) {
@@ -80,6 +88,11 @@ export class BleDevice {
     return {
       write: async (bytes) => {
         await writeFrame(write, bytes);
+      },
+      writeTo: async (charUuid, bytes) => {
+        const aux = this.auxCharacteristics.get(charUuid);
+        if (!aux) throw new Error(`characteristic ${charUuid} not in driver allowlist / not found`);
+        await writeFrame(aux, bytes);
       },
       nextNotification: (timeoutMs) =>
         new Promise((resolve) => {

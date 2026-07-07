@@ -8,6 +8,7 @@ import { chooserRequest, identifyAll } from "./drivers/registry";
 import { CONFIDENCE_WRITE_THRESHOLD } from "./drivers/driver";
 import { BleDevice } from "./transport/ble";
 import { GamepadSource } from "./input/gamepad";
+import { HidSource } from "./input/hid";
 import { MappingEngine, type InputEvent } from "./input/mapping";
 
 const app = document.getElementById("app")!;
@@ -22,17 +23,30 @@ const mapping = new MappingEngine(
   (channelId) => state[channelId] ?? 0,
 );
 
-const gamepads = new GamepadSource(onInput, renderPads);
+let padLabels: string[] = [];
+let hidLabels: string[] = [];
+
+const gamepads = new GamepadSource(onInput, (labels) => {
+  padLabels = labels;
+  renderPads();
+});
 gamepads.start();
+
+const hid = new HidSource(onInput, (labels) => {
+  hidLabels = labels;
+  renderPads();
+});
 
 function onInput(ev: InputEvent, dt: number): void {
   if (learnTarget && Math.abs(ev.value) > 0.6) {
     const isAxis = ev.controlKey.includes("axis");
+    const isEncoder = ev.relative === true;
     mapping.addBinding({
       controlKey: ev.controlKey,
       channelId: learnTarget,
       mode: isAxis ? "absolute" : "relative",
-      gain: isAxis ? 1 : 0.5,
+      // Encoder detents nudge finely; held buttons/triggers sweep at 0.5/s.
+      gain: isAxis ? 1 : isEncoder ? 0.01 : 0.5,
       curve: "linear",
       deadzone: 0.1,
     });
@@ -78,12 +92,14 @@ async function connect(): Promise<void> {
       return;
     }
 
+    // Init handshake first — SP110E-class hardware drops the link without
+    // it, and probes depend on a live, initialized connection.
+    await best.driver.postConnect?.(dev.probeIO());
     let confidence = best.confidence;
     if (best.driver.probe) {
       const probed = await best.driver.probe(dev.probeIO());
       if (probed !== null) confidence = probed;
     }
-    await best.driver.postConnect?.(dev.probeIO());
 
     ble = dev;
     capability = best.driver.describe();
@@ -138,12 +154,13 @@ function setStatus(text: string): void {
   if (s) s.textContent = text;
 }
 
-function renderPads(labels: string[]): void {
+function renderPads(): void {
   const padsEl = document.getElementById("pads");
   if (padsEl) {
-    padsEl.textContent = labels.length
-      ? labels.join(" · ")
-      : "No gamepads. Connect one and press any button.";
+    const all = [...padLabels, ...hidLabels];
+    padsEl.textContent = all.length
+      ? all.join(" · ")
+      : "No input devices. Connect a gamepad and press any button, or add a HID knob.";
   }
 }
 
@@ -176,6 +193,14 @@ function render(): void {
     const blinkBtn = el("button", "warn", "Run blink test") as HTMLButtonElement;
     blinkBtn.onclick = () => void blinkTest();
     bar.append(blinkBtn);
+  }
+  if (hid.supported) {
+    const hidBtn = el("button", "", "＋ knob / HID device") as HTMLButtonElement;
+    hidBtn.onclick = () =>
+      void hid.requestDevice().catch((err: unknown) => {
+        setStatus(`HID: ${err instanceof Error ? err.message : String(err)}`);
+      });
+    bar.append(hidBtn);
   }
   bar.append(el("span", "status", ""));
   bar.lastElementChild!.id = "status";
@@ -255,7 +280,7 @@ function render(): void {
   const pads = el("div", "pads");
   pads.id = "pads";
   app.append(pads);
-  renderPads([]);
+  renderPads();
   renderValues();
 }
 

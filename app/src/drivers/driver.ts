@@ -13,6 +13,9 @@ export interface IdentityEvidence {
  *  encode() and are written by the paced transport (threat model rule 1). */
 export interface ProbeIO {
   write(bytes: Uint8Array): Promise<void>;
+  /** Write to a declared auxiliary characteristic (Driver.auxChars) —
+   *  e.g. SP110E's ffe2 init handshake. Rejects undeclared UUIDs. */
+  writeTo(charUuid: string, bytes: Uint8Array): Promise<void>;
   /** Resolves with the next notification, or null on timeout. */
   nextNotification(timeoutMs: number): Promise<Uint8Array | null>;
 }
@@ -35,6 +38,9 @@ export interface Driver {
   writeChar: Record<string, string>;
   /** Optional notify characteristic per service. */
   notifyChar?: Record<string, string>;
+  /** Extra writable characteristics (per service) used ONLY inside
+   *  postConnect/probe via ProbeIO.writeTo — still allowlist-bound. */
+  auxChars?: Record<string, string[]>;
 
   /** Stages 1–2 (+3 where possible): evidence → confidence in [0,1]. */
   identify(evidence: IdentityEvidence): number;

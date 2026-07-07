@@ -132,11 +132,33 @@ treat each as its own family until verified.
 | Write/notify characteristic | `FFE1` (descriptor `2902`) |
 
 ### Protocol
-- 14 known commands, each **4 bytes**: `[d0 d1 d2 CMD]` (rename is longer).
-- Must write a specific init sequence immediately after connecting or the
-  device drops the connection.
-- Configurable: pixel count, chip type, color order — meaning the *driver*
-  can honestly report the real diode topology.
+- 14 commands, each **4 bytes**: `[d0 d1 d2 CMD]` (data first, command byte
+  last; rename is longer).
+- **Init handshake required immediately after connect** or the device drops
+  the link: write `01 00` to `FFE2`, then `01 b7 e3 d5` to `FFE1`.
+
+| Action | Cmd byte | Data bytes | Notes |
+|---|---|---|---|
+| CHECK_DEVICE | `d5` | 3 | device info + checksum validation |
+| GET_INFO | `10` | 0 | → 12-byte state notification (no checksum) |
+| LED_ON / LED_OFF | `aa` / `ab` | 0 | |
+| SET_STATIC_COLOR | `1e` | RR GG BB | 8-bit each |
+| SET_BRIGHT | `2a` | BB | **true 0–255 → 256 steps** (beats ELK's 101) |
+| SET_WHITE | `69` | WW | white diode on RGBW ICs (SK6812 RGBW etc.) |
+| SET_MODE | `2c` | MM | presets 1–120; **121 = static color** |
+| SET_SPEED | `03` | SS | preset animation speed |
+| SET_MODE_AUTO | `06` | 0 | cycle presets |
+| SET_IC_MODEL | `1c` | 1 | ⚠ config-tier: 32 IC types (SM16703…PG412) |
+| SET_RGB_SEQ | `3c` | 1 | ⚠ config-tier: RGB/RBG/GRB/GBR/BRG/BGR |
+| SET_LED_NUM | `2d` | 2 | ⚠ config-tier: pixel count 1–1024 |
+| RENAME | `bb` | len+ASCII | |
+
+### Correction (2026-07-07)
+Earlier notes here claimed per-pixel control. **Wrong**: the SP110E BLE
+protocol is whole-strip only — no per-pixel streaming exists. Its precision
+value over ELK-BLEDOM is the true 256-step brightness path and a real white
+channel on RGBW ICs. Per-pixel on sealed BLE hardware currently means
+LEDnetWF addressable models ("smear" command).
 
 Source: https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012
 (LED Hue app RE), https://github.com/roslovets/SP110E (asyncio reference

@@ -79,11 +79,16 @@ entities:
 
   - id: family.sp110e
     type: device-family
-    description: ~$5 BLE controller for addressable strips; per-diode control
-    channels: per-pixel 8bit RGB(W), configurable chip/order/count
-    state_readback: announces state after init
+    description: ~$5 BLE controller for addressable strips
+    channels: {r: 8bit, g: 8bit, b: 8bit, brightness: 8bit, w: 8bit-on-RGBW-ICs}
+    per_pixel: false   # CORRECTED 2026-07-07 — BLE protocol is whole-strip
+      # only; earlier per-pixel claim was wrong. Per-pixel on sealed BLE
+      # hardware = family.lednetwf smear command.
+    config_tier: [ic model (32 types), rgb sequence, pixel count 1-1024]
+    state_readback: GET_INFO -> 12-byte frame
     pairing: none
-    quirk: must send init sequence immediately after connect or link drops
+    quirk: init handshake immediately after connect or link drops
+      (01 00 -> ffe2, then 01 b7 e3 d5 -> ffe1)
     confidence: community-verified
     source:
       - https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012
@@ -159,9 +164,20 @@ entities:
   - id: protocol.sp110e
     type: ble-protocol
     service: ffe0
-    write_char: ffe1
+    write_char: ffe1        # also notifies
+    aux_char: ffe2          # init handshake only
     frame: 4 bytes [d0 d1 d2 CMD]; 14 commands; rename is longer
-    init_required: yes (immediately post-connect)
+    init_sequence: ["01 00 -> ffe2", "01 b7 e3 d5 -> ffe1"]
+    commands:
+      led_on: "00 00 00 aa"
+      led_off: "00 00 00 ab"
+      set_color: "RR GG BB 1e"
+      set_bright: "BB 00 00 2a   # true 256 steps"
+      set_white: "WW 00 00 69"
+      set_mode: "MM 00 00 2c    # 1-120 presets, 121 = static"
+      get_info: "00 00 00 10    # -> 12-byte state notification"
+      config_tier_dangerous: [set_ic_model 1c, set_rgb_seq 3c, set_led_num 2d]
+    per_pixel: false
     confidence: community-verified
     source: [https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012]
 
@@ -241,7 +257,8 @@ entities:
   - id: hw.sp110e_ws2812
     type: hardware-recipe
     cost_usd: ~10
-    payoff: per-diode control on sealed BLE hardware; best precision/$ Tier 0
+    payoff: true 256-step brightness + real white diode (SK6812 RGBW) on
+      sealed BLE hardware; whole-strip only (per_pixel: false)
   - id: hw.esp32_mosfet_analog
     type: hardware-recipe
     cost_usd: ~12
@@ -312,8 +329,10 @@ decisions:
   - id: decision.first_drivers
     text: Ship ELK-BLEDOM (largest install base, Lotus Lantern users) and
       Triones (only family with status read-back -> proves the state loop)
-      first; SP110E next (unlocks per-diode).
-    justified_by: [family.elk_bledom, family.triones, family.sp110e]
+      first; SP110E third (256-step brightness, white channel, init-hook
+      exerciser). All three shipped. Per-diode ambition now routes through
+      family.lednetwf (smear command) — next driver target.
+    justified_by: [family.elk_bledom, family.triones, family.sp110e, family.lednetwf]
   - id: decision.effects_out_of_scope
     text: Built-in vendor effects are exposed minimally or not at all;
       LedFx/vendor apps own that space. We own precision manual control.

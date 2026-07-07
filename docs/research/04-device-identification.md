@@ -58,7 +58,7 @@ strip (see threat model).
 | ELK-BLEDOM | prefixes: `ELK-BLE`, `ELK-BT`, `ELK-BULB`, `MELK`, `LEDBLE`, `LED-`, `XROCKER`, `JACKYLED`, `DMRRBA` | svc `fff0` + write `fff3` + notify `fff4` (or `ffe0`/`ffe1`/`ffe2` variant) | none reliable (write-only family) → blink test required below 0.8 |
 | Triones | prefixes: `Triones`, `LEDBLE-` (collides with ELK — GATT disambiguates) | svc `ffd5` + write `ffd9`, notify svc/char `ffd0`/`ffd4` | status query `ef 01 77` → 12-byte `66…99` frame = confirmed |
 | LEDnetWF | prefix: `LEDnetWF` | Zengge service set | advertising manufacturer-data carries state (parse before connect if available via chooser `adData`) |
-| SP110E | prefixes: `SP110E` (also `SP105E`, `SP107E` → different protocols — do NOT cross-drive) | svc `ffe0` + char `ffe1` w/ notify+write | device announces state after init sequence |
+| SP110E | prefixes: `SP110E` (also `SP105E`, `SP107E` → different protocols — do NOT cross-drive) | svc `ffe0` + char `ffe1` w/ notify+write (+ init char `ffe2`) | after init handshake: `GET_INFO` (`00 00 00 10`) → 12-byte state frame = confirmed |
 
 Maintain this table in `knowledge-graph.yaml` (`identification.*` entities);
 the registry reads its data from generated constants that must match.
