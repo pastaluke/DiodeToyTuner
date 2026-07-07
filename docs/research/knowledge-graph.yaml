@@ -204,7 +204,9 @@ entities:
     power_magic: {on: 0x23, off: 0x24}
     effects: 0x01-0x71 (fw 0x53) or 0x01-0x64 (fw 0x56)
     per_pixel_command: smear (not yet distilled)
-    confidence: community-verified
+    confidence: verified-by-us   # 2026-07-07 sunset lamp LEDnetWF020027A5AE11:
+      # power + HSV + settings-query probe confirmed on hardware via our app.
+      # Effects / white payloads remain community-verified/reported.
     source:
       - https://github.com/8none1/zengge_lednetwf
       - https://github.com/8none1/lednetwf_ble

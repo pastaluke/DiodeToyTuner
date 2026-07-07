@@ -17,7 +17,7 @@ levels:
 | Strip controlled by **Lotus Lantern / LotusLamp X / duoCo Strip** (ELK-BLEDOM family) | 🧪 theoretical | Driver shipped; protocol from two independent RE efforts. Largest install base — most likely first ✅. |
 | Bulb/strip controlled by **HappyLighting / Triones** | 🧪 theoretical | Driver shipped; only family with state read-back, so the app can show real device state. |
 | **SP110E** pixel controller (LED Hue app) | 🧪 theoretical | Driver shipped incl. the required init handshake. Whole-strip control only (BLE protocol has no per-pixel). |
-| **Zengge / Magic Home BLE** (LEDnetWF names, incl. many sunset lamps) | 🧪 theoretical | Driver shipped from a real field sighting (`LEDnetWF020027A5AE11`). Native HSV channels: hue 180 steps, sat/value 101 each. Per-pixel "smear" still to come. |
+| **Zengge / Magic Home BLE** (LEDnetWF names, incl. many sunset lamps) | ✅ **verified** | 2026-07-07: sunset lamp `LEDnetWF020027A5AE11` — connect, identify-probe, HSV control **and gamepad mapping** all confirmed working on real hardware. Hue 180 steps, sat/value 101 each. Per-pixel "smear" still to come. |
 | **Magic Home Wi-Fi**, **WLED** devices | ❌ not yet | Browsers can't reach them directly; needs the planned local bridge. |
 | **Sunset lamp projectors** ("APP control") | 🎲 depends | Same controllers as strips behind a lens — ELK-BLEDOM / Triones units work in theory; **Smart Life (Tuya)** units are out of reach (encrypted). See [research/07-sunset-lamp-survey.md](research/07-sunset-lamp-survey.md). |
 
@@ -31,7 +31,7 @@ issue — most new-family support starts from exactly that report.
 | Method | Status | Notes |
 |---|---|---|
 | `npm run dev` on localhost, Chrome/Edge desktop with Bluetooth | 🧪 theoretical | Secure-context rules allow Web Bluetooth on localhost. |
-| GitHub Pages (`.github/workflows/deploy-pages.yml`) → Chrome on Android | 🧪 theoretical | Repo Settings → Pages → Source: "GitHub Actions"; deploys on push to `main`. |
+| GitHub Pages (`.github/workflows/deploy-pages.yml`) → Chrome on Android | ✅ **verified** | 2026-07-07: full flow confirmed on a phone against real hardware (connect + control + gamepad mapping). |
 | Cloudflare Pages (root `app`, build `npm run build`, output `app/dist`) | 🧪 theoretical | Same bundle; relative base makes it host-agnostic. |
 | iPhone | ⚠️ mostly no | iOS Safari/Chrome lack Web Bluetooth. The third-party "Bluefy" browser implements it; untested. Android or desktop is the smooth path. |
 
