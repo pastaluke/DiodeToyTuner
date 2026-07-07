@@ -1,0 +1,320 @@
+# DiodeToyTuner research knowledge graph
+# ---------------------------------------
+# Machine-readable distillation of docs/research/*.md.
+# Conventions:
+#   - ids are stable and dot-namespaced: family.*, protocol.*, gatt.*, app.*,
+#     platform.*, hw.*, identification.*, decision.*
+#   - confidence: verified-by-us | community-verified | reported
+#   - every entity carries source URLs; prefer primary RE repos.
+# Rules for agents: see docs/research/00-INDEX.md ("How to use the knowledge
+# graph"). Never contradict this file silently; fix it in the same commit.
+
+meta:
+  updated: 2026-07-07
+  scope: >
+    BLE LED controller families controllable from a web app, the platform
+    APIs available to reach them and to read physical inputs, and the
+    hardware users can buy/build.
+
+entities:
+  # ── Vendor apps we replace ────────────────────────────────────────────
+  - id: app.lotus_lantern
+    type: vendor-app
+    names: [Lotus Lantern, LotusLamp X, duoCo Strip]
+    platform: android/ios
+    source: [https://github.com/dave-code-ruiz/elkbledom]
+
+  - id: app.magic_home
+    type: vendor-app
+    names: [Magic Home, Magic Home Pro, Zengge, Surp Life]
+    vendor: Zengge
+    source: [https://github.com/lightinglibs/flux_led]
+
+  - id: app.happy_lighting
+    type: vendor-app
+    names: [HappyLighting, Triones]
+    source: [https://github.com/sysofwan/ha-triones]
+
+  - id: app.led_hue
+    type: vendor-app
+    names: [LED Hue]
+    source: [https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012]
+
+  # ── Device families ───────────────────────────────────────────────────
+  - id: family.elk_bledom
+    type: device-family
+    description: Most common cheap BLE RGB strip controller (many brand names)
+    price_usd: [5, 15]
+    channels: {r: 8bit, g: 8bit, b: 8bit, brightness: 101-steps}
+    state_readback: none
+    pairing: none
+    confidence: community-verified
+    source:
+      - https://github.com/dave-code-ruiz/elkbledom
+      - https://github.com/8none1/elk-bledob
+
+  - id: family.triones
+    type: device-family
+    description: Cheap RGBW BLE bulbs/strips (Triones / HappyLighting apps)
+    channels: {r: 8bit, g: 8bit, b: 8bit, w: 8bit}
+    channel_constraint: rgb-xor-white   # firmware forbids simultaneous RGB+W
+    state_readback: 12-byte status frame
+    pairing: none
+    confidence: community-verified
+    source:
+      - https://github.com/madhead/saberlight/blob/master/protocols/Triones/protocol.md
+      - https://github.com/sysofwan/ha-triones
+
+  - id: family.lednetwf
+    type: device-family
+    description: Zengge BLE line (rings, fairy strings, strips); Magic Home BLE side
+    channels: {hue: 180-steps, saturation: 101-steps, value: 101-steps}
+    per_pixel: via smear command on addressable models
+    state_readback: in advertising manufacturer data (no connect needed)
+    pairing: none
+    confidence: community-verified
+    source:
+      - https://github.com/8none1/zengge_lednetwf
+      - https://github.com/8none1/lednetwf_ble
+
+  - id: family.sp110e
+    type: device-family
+    description: ~$5 BLE controller for addressable strips; per-diode control
+    channels: per-pixel 8bit RGB(W), configurable chip/order/count
+    state_readback: announces state after init
+    pairing: none
+    quirk: must send init sequence immediately after connect or link drops
+    confidence: community-verified
+    source:
+      - https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012
+      - https://github.com/roslovets/SP110E
+
+  - id: family.magichome2_ble
+    type: device-family
+    description: MagicHome2/SurpLife/YIQU BLE string lights
+    confidence: reported
+    status: driver-not-started; distill protocol from source before coding
+    source: [https://github.com/rabidpaperclip/magichome2-ble]
+
+  - id: family.zengge_wifi
+    type: device-family
+    description: Magic Home Wi-Fi devices; TCP port 5577; browser-unreachable
+    reachable_from_browser: false
+    requires: transport.bridge
+    confidence: community-verified
+    source: [https://github.com/lightinglibs/flux_led]
+
+  - id: family.wled_device
+    type: device-family
+    description: Any ESP32/8266 running WLED; HTTP JSON API on LAN
+    reachable_from_browser: partial   # mixed-content + PNA constraints
+    requires: transport.bridge (clean path)
+    confidence: community-verified
+    source: [https://kno.wled.ge/]
+
+  # ── Protocols / GATT endpoints ────────────────────────────────────────
+  - id: protocol.elk_bledom
+    type: ble-protocol
+    service: 0000fff0-0000-1000-8000-00805f9b34fb
+    write_char: 0000fff3-0000-1000-8000-00805f9b34fb
+    notify_char: 0000fff4-0000-1000-8000-00805f9b34fb
+    variant: {service: ffe0, write: ffe1, notify: ffe2}
+    frame: "7e .. .. .. .. .. .. .. ef (9 bytes)"
+    commands:
+      power_on:  "7e 07 04 ff 00 01 02 01 ef"
+      power_off: "7e 07 04 00 00 00 02 01 ef"
+      set_rgb:   "7e 07 05 03 RR GG BB 10 ef"
+      brightness: "7e 04 01 BB 01 ff 02 01 ef  # BB decimal 0-100"
+    init_required: only some MELK-* units (7e 07 83 frames)
+    confidence: community-verified
+    source: [https://github.com/8none1/elk-bledob, https://github.com/dave-code-ruiz/elkbledom]
+
+  - id: protocol.triones
+    type: ble-protocol
+    service: ffd5
+    write_char: ffd9
+    notify_char: ffd4        # under service ffd0 on some units
+    commands:
+      power_on:  "cc 23 33"
+      power_off: "cc 24 33"
+      set_rgb:   "56 RR GG BB 00 f0 aa"
+      set_white: "56 00 00 00 WW 0f aa"
+      set_mode:  "bb MM SS 44  # MM 0x25-0x38, SS speed 01=fast ff=slow"
+      status_query: "ef 01 77"
+    status_response: "66 ?? PW MD ?? ?? RR GG BB WW ?? 99 (12 bytes)"
+    confidence: community-verified
+    source: [https://github.com/madhead/saberlight/blob/master/protocols/Triones/protocol.md]
+
+  - id: protocol.lednetwf
+    type: ble-protocol
+    framing: fragmenting wrapper (flags, counter, fragment flags/counter,
+      big-endian length, checksum = sum of post-header bytes)
+    color_model: HSV (hue/2 in one byte; sat+val 0-100)
+    power_magic: {on: 0x23, off: 0x24}
+    effects: 0x01-0x71 (fw 0x53) or 0x01-0x64 (fw 0x56)
+    per_pixel_command: smear
+    confidence: community-verified
+    source: [https://github.com/8none1/zengge_lednetwf]
+
+  - id: protocol.sp110e
+    type: ble-protocol
+    service: ffe0
+    write_char: ffe1
+    frame: 4 bytes [d0 d1 d2 CMD]; 14 commands; rename is longer
+    init_required: yes (immediately post-connect)
+    confidence: community-verified
+    source: [https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012]
+
+  # ── Identification evidence ───────────────────────────────────────────
+  - id: identification.elk_bledom
+    type: identification-evidence
+    name_prefixes: [ELK-BLE, ELK-BT, ELK-BULB, MELK, LEDBLE, LED-, XROCKER, JACKYLED, DMRRBA]
+    gatt_shape: [fff0+fff3+fff4, ffe0+ffe1+ffe2]
+    active_probe: none (write-only family) -> blink test mandatory below 0.8
+    source: [https://github.com/dave-code-ruiz/elkbledom]
+
+  - id: identification.triones
+    type: identification-evidence
+    name_prefixes: [Triones, LEDBLE-]
+    name_collision: LEDBLE- also claimed by family.elk_bledom; GATT decides
+    gatt_shape: [ffd5+ffd9+ffd4]
+    active_probe: "ef 01 77 -> expect 12-byte 66..99 frame (near-proof)"
+    source: [https://github.com/madhead/saberlight/blob/master/protocols/Triones/protocol.md]
+
+  - id: identification.lednetwf
+    type: identification-evidence
+    name_prefixes: [LEDnetWF]
+    adv_manufacturer_data: carries power/color/config state pre-connect
+    source: [https://github.com/8none1/zengge_lednetwf]
+
+  - id: identification.sp110e
+    type: identification-evidence
+    name_prefixes: [SP110E]
+    warning: SP105E/SP107E/SP611E advertise similarly but speak DIFFERENT
+      protocols; never cross-drive
+    gatt_shape: [ffe0+ffe1(write+notify)]
+    source: [https://gist.github.com/mbullington/37957501a07ad065b67d4e8d39bfe012]
+
+  # ── Platform APIs ─────────────────────────────────────────────────────
+  - id: platform.web_bluetooth
+    type: web-api
+    support: chromium-only (desktop + android); firefox/safari refused
+    requires: secure context (https or localhost) + user gesture chooser
+    key_constraints:
+      - services must be declared at requestDevice time (natural allowlist)
+      - GATT blocklist protects HID etc.
+      - writeWithoutResponse + client pacing needed for LED frame rates
+      - getDevices() enables prompt-free reconnect (persistent permissions)
+    source:
+      - https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API
+      - https://webbluetoothcg.github.io/web-bluetooth/
+
+  - id: platform.gamepad_api
+    type: web-api
+    support: all major browsers
+    model: poll navigator.getGamepads(); standard mapping = 4 axes [-1,1],
+      17 buttons value [0,1], analog triggers = buttons 6/7
+    notes: stadia controller in BT mode = standard gamepad; pads hidden until
+      first button press (fingerprint protection)
+    source: [https://w3c.github.io/gamepad/]
+
+  - id: platform.webhid
+    type: web-api
+    support: chromium desktop only
+    use: rotary encoders, jog wheels, vendor-defined HID (RP2040 DIY knobs)
+    precedent: HID Remapper configures hardware entirely via WebHID
+    source: [https://wicg.github.io/webhid/, https://www.remapper.org/manual/]
+
+  - id: platform.web_midi
+    type: web-api
+    support: chromium (+ firefox with prompt)
+    use: knob boxes (nanoKONTROL etc.), 128-step CCs
+    status: later milestone
+
+  - id: transport.bridge
+    type: planned-component
+    description: optional local native helper (or Tauri build) exposing LAN
+      devices (WLED HTTP, Magic Home TCP 5577, E1.31) to the app
+    status: not-started
+
+  # ── Hardware ──────────────────────────────────────────────────────────
+  - id: hw.sp110e_ws2812
+    type: hardware-recipe
+    cost_usd: ~10
+    payoff: per-diode control on sealed BLE hardware; best precision/$ Tier 0
+  - id: hw.esp32_mosfet_analog
+    type: hardware-recipe
+    cost_usd: ~12
+    payoff: up to ~16-bit PWM per color rail via WLED (beats all 8-bit sealed gear)
+    parts: [esp32 devkit, 4x IRLZ44N/AO3400, 12V PSU]
+  - id: hw.quinled_dig_uno
+    type: hardware-product
+    role: community-standard open addressable controller for WLED
+    source: [https://quinled.info/]
+  - id: hw.rp2040_encoder_knob
+    type: hardware-recipe
+    cost_usd: ~7
+    payoff: physical encoder wheel -> WebHID input source; canonical light-toy build
+    parts: [rp2040 board (pico/zero), EC11 encoder, circuitpython HID sketch]
+  - id: hw.hid_remapper
+    type: hardware-product
+    role: open RP2040 firmware turning arbitrary USB inputs into clean HID
+    source: [https://www.remapper.org/]
+
+relations:
+  # family ↔ app ↔ protocol
+  - [family.elk_bledom, controlled_by_app, app.lotus_lantern]
+  - [family.triones, controlled_by_app, app.happy_lighting]
+  - [family.lednetwf, controlled_by_app, app.magic_home]
+  - [family.sp110e, controlled_by_app, app.led_hue]
+  - [family.zengge_wifi, controlled_by_app, app.magic_home]
+  - [family.elk_bledom, speaks, protocol.elk_bledom]
+  - [family.triones, speaks, protocol.triones]
+  - [family.lednetwf, speaks, protocol.lednetwf]
+  - [family.sp110e, speaks, protocol.sp110e]
+  - [family.elk_bledom, identified_by, identification.elk_bledom]
+  - [family.triones, identified_by, identification.triones]
+  - [family.lednetwf, identified_by, identification.lednetwf]
+  - [family.sp110e, identified_by, identification.sp110e]
+  # reachability
+  - [protocol.elk_bledom, reachable_via, platform.web_bluetooth]
+  - [protocol.triones, reachable_via, platform.web_bluetooth]
+  - [protocol.lednetwf, reachable_via, platform.web_bluetooth]
+  - [protocol.sp110e, reachable_via, platform.web_bluetooth]
+  - [family.zengge_wifi, reachable_via, transport.bridge]
+  - [family.wled_device, reachable_via, transport.bridge]
+  # inputs
+  - [hw.rp2040_encoder_knob, read_via, platform.webhid]
+  - [hw.hid_remapper, read_via, platform.webhid]
+  # shared heritage hint (power magics 0x23/0x24 shared)
+  - [protocol.lednetwf, shares_magic_numbers_with, protocol.triones]
+
+decisions:
+  - id: decision.chromium_first
+    text: Target Chromium via Web Bluetooth; no polyfills for Firefox/Safari.
+      Native bridge (transport.bridge / Tauri) is the multi-browser path.
+    justified_by: [platform.web_bluetooth]
+  - id: decision.unit_interval_model
+    text: All tunable parameters are floats in [0,1]; drivers quantize and
+      report true step counts (e.g. ELK brightness = 101 steps, not 256).
+    justified_by: [protocol.elk_bledom, protocol.lednetwf, family.triones]
+  - id: decision.allowlist_writes
+    text: GATT writes only to characteristics a positively-identified driver
+      declares; identification pipeline with confidence gate + blink test.
+    justified_by: [identification.elk_bledom, identification.triones, platform.web_bluetooth]
+  - id: decision.write_only_shadow_state
+    text: Shadow device state client-side; most families have no read-back.
+    justified_by: [family.elk_bledom, family.sp110e]
+  - id: decision.driver_post_connect_hook
+    text: Driver interface includes postConnect() because MELK and SP110E
+      need init writes or the link drops.
+    justified_by: [protocol.sp110e, protocol.elk_bledom]
+  - id: decision.first_drivers
+    text: Ship ELK-BLEDOM (largest install base, Lotus Lantern users) and
+      Triones (only family with status read-back -> proves the state loop)
+      first; SP110E next (unlocks per-diode).
+    justified_by: [family.elk_bledom, family.triones, family.sp110e]
+  - id: decision.effects_out_of_scope
+    text: Built-in vendor effects are exposed minimally or not at all;
+      LedFx/vendor apps own that space. We own precision manual control.
+    justified_by: [family.elk_bledom, family.lednetwf]
