@@ -17,7 +17,7 @@ levels:
 | Strip controlled by **Lotus Lantern / LotusLamp X / duoCo Strip** (ELK-BLEDOM family) | 🧪 theoretical | Driver shipped; protocol from two independent RE efforts. Largest install base — most likely first ✅. |
 | Bulb/strip controlled by **HappyLighting / Triones** | 🧪 theoretical | Driver shipped; only family with state read-back, so the app can show real device state. |
 | **SP110E** pixel controller (LED Hue app) | 🧪 theoretical | Driver shipped incl. the required init handshake. Whole-strip control only (BLE protocol has no per-pixel). |
-| **Zengge / Magic Home BLE** (LEDnetWF names) | ❌ not yet | Next driver target (per-pixel "smear" command is the prize). |
+| **Zengge / Magic Home BLE** (LEDnetWF names, incl. many sunset lamps) | 🧪 theoretical | Driver shipped from a real field sighting (`LEDnetWF020027A5AE11`). Native HSV channels: hue 180 steps, sat/value 101 each. Per-pixel "smear" still to come. |
 | **Magic Home Wi-Fi**, **WLED** devices | ❌ not yet | Browsers can't reach them directly; needs the planned local bridge. |
 | **Sunset lamp projectors** ("APP control") | 🎲 depends | Same controllers as strips behind a lens — ELK-BLEDOM / Triones units work in theory; **Smart Life (Tuya)** units are out of reach (encrypted). See [research/07-sunset-lamp-survey.md](research/07-sunset-lamp-survey.md). |
 

@@ -12,6 +12,7 @@ them into these app families:
 
 | App the manual points to | Underlying family | Our support |
 |---|---|---|
+| **Zengge / Magic Home** | LEDnetWF (svc `ffff`, wrapped HSV frames) — **field-confirmed in a sunset lamp**: `LEDnetWF020027A5AE11` sighted via Diagnose, 2026-07-07 | ✅ driver shipped |
 | **Lotus Lantern / LotusLamp X / duoCo Strip** | ELK-BLEDOM (`7e…ef` frames, svc `fff0`) | ✅ driver shipped |
 | **HappyLighting / Triones** | Triones (svc `ffd5`) | ✅ driver shipped |
 | **Smart Life / Tuya** | Tuya BLE or Wi-Fi module | ❌ out of reach: Tuya BLE is **authenticated + encrypted** (session keys from the Tuya cloud pairing); not a realistic Web Bluetooth target |

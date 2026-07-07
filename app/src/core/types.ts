@@ -7,7 +7,10 @@
  * precision.
  */
 
-export type ChannelKind = "r" | "g" | "b" | "w" | "cw" | "ww" | "power" | "pixel";
+export type ChannelKind =
+  | "r" | "g" | "b" | "w" | "cw" | "ww"
+  | "hue" | "sat" | "val"
+  | "power" | "pixel";
 
 export interface Channel {
   /** Stable id, unique within the device, e.g. "r", "brightness". */

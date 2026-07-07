@@ -83,8 +83,31 @@ https://github.com/sysofwan/ha-triones.
 
 ## Family: Zengge LEDnetWF (BLE side of Magic Home) — confidence: community-verified
 
-Zengge's BLE product line (ring lights, fairy strings, strips). Vendor app:
-Zengge / Magic Home family.
+Zengge's BLE product line (ring lights, fairy strings, strips, sunset
+lamps). Vendor app: Zengge / Magic Home family. **Field sighting
+2026-07-07:** a Zengge-app sunset lamp advertising `LEDnetWF020027A5AE11`
+(name = `LEDnetWF` + 4 product hex + 8 MAC hex) via our Diagnose mode.
+
+### GATT
+| Role | UUID |
+|---|---|
+| Service | `0000ffff-0000-1000-8000-00805f9b34fb` (variant units: `0000ff00…`) |
+| Write | `0000ff01-0000-1000-8000-00805f9b34fb` |
+| Notify | `0000ff02-0000-1000-8000-00805f9b34fb` |
+
+### Verbatim packets (captures from 8none1/zengge_lednetwf)
+| Action | Bytes |
+|---|---|
+| Power on | `00 04 80 00 00 0d 0e 0b · 3b 23 00 00 00 00 00 00 00 32 00 00 · 90` |
+| Power off | `00 5b 80 00 00 0d 0e 0b · 3b 24 00 00 00 00 00 00 00 32 00 00 · 91` |
+| HSV color (fw 0x53) | `00 05 80 00 00 0d 0e 0b · 3b a1 HH SS VV 00 00 00 00 00 00 00 · chk` |
+| LED-settings query | `00 35 80 00 00 04 05 0a · 81 8a 8b · 96` (response arrives on ff02 → identity probe) |
+| Effect (fw 0x53) | `00 06 80 00 00 04 05 0b · 38 EE SS BB` (effect 0x01–0x71, speed/brightness 1–0x64) |
+
+Checksum = sum of payload bytes & 0xFF (wrapper excluded) — confirmed:
+power-on `0x3b+0x23+0x32 = 0x90`. Wrapper byte 7 is `0x0b` for commands,
+`0x0a` for queries expecting a response; SEQ (byte 1) increments and is
+generally ignored by the device.
 
 ### Framing (all commands share a fragmenting wrapper)
 | Byte(s) | Meaning |

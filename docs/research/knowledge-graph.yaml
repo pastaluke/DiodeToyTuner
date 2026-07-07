@@ -188,14 +188,26 @@ entities:
 
   - id: protocol.lednetwf
     type: ble-protocol
-    framing: fragmenting wrapper (flags, counter, fragment flags/counter,
-      big-endian length, checksum = sum of post-header bytes)
-    color_model: HSV (hue/2 in one byte; sat+val 0-100)
+    service: 0000ffff-0000-1000-8000-00805f9b34fb   # variant units: 0000ff00
+    write_char: 0000ff01-0000-1000-8000-00805f9b34fb
+    notify_char: 0000ff02-0000-1000-8000-00805f9b34fb
+    framing: "8-byte wrapper [00 SEQ 80 00 LEN_HI LEN_LO LEN+1 CMDID] +
+      payload + checksum(sum of payload & 0xff); CMDID 0x0b command /
+      0x0a query-expecting-response; SEQ ignored by device"
+    color_model: HSV (hue/2 in one byte -> 180 steps; sat+val 0-100 -> 101 steps)
+    commands:
+      power_on_payload:  "3b 23 00 00 00 00 00 00 00 32 00 00  # chk 0x90"
+      power_off_payload: "3b 24 00 00 00 00 00 00 00 32 00 00  # chk 0x91"
+      hsv_payload:       "3b a1 HH SS VV 00 00 00 00 00 00 00"
+      settings_query_payload: "81 8a 8b  # chk 0x96, cmdid 0x0a -> notification = identity probe"
+      effect_payload:    "38 EE SS BB  # fw 0x53; effect 01-71, speed/bright 1-64"
     power_magic: {on: 0x23, off: 0x24}
     effects: 0x01-0x71 (fw 0x53) or 0x01-0x64 (fw 0x56)
-    per_pixel_command: smear
+    per_pixel_command: smear (not yet distilled)
     confidence: community-verified
-    source: [https://github.com/8none1/zengge_lednetwf]
+    source:
+      - https://github.com/8none1/zengge_lednetwf
+      - https://github.com/8none1/lednetwf_ble
 
   - id: protocol.sp110e
     type: ble-protocol
@@ -236,8 +248,14 @@ entities:
   - id: identification.lednetwf
     type: identification-evidence
     name_prefixes: [LEDnetWF]
+    name_format: "LEDnetWF + 4 product hex + 8 MAC hex (e.g. LEDnetWF020027A5AE11)"
+    gatt_shape: [ffff+ff01+ff02, ff00+ff01+ff02]
+    active_probe: "settings query 81 8a 8b (cmdid 0x0a) -> notification on ff02 = confirmed"
     adv_manufacturer_data: carries power/color/config state pre-connect
-    source: [https://github.com/8none1/zengge_lednetwf]
+    field_sighting: LEDnetWF020027A5AE11 (Zengge-app sunset lamp, 2026-07-07,
+      via Diagnose mode; service not enumerated pre-fix because ffff was
+      missing from the diagnostic candidate list)
+    source: [https://github.com/8none1/zengge_lednetwf, https://github.com/8none1/lednetwf_ble]
 
   - id: identification.sp110e
     type: identification-evidence
@@ -402,8 +420,10 @@ decisions:
     text: Ship ELK-BLEDOM (largest install base, Lotus Lantern users) and
       Triones (only family with status read-back -> proves the state loop)
       first; SP110E third (256-step brightness, white channel, init-hook
-      exerciser). All three shipped. Per-diode ambition now routes through
-      family.lednetwf (smear command) — next driver target.
+      exerciser); LEDnetWF fourth (built 2026-07-07 from a real user field
+      sighting — native HSV channels, settings-query probe). All four
+      shipped. Per-diode ambition still routes through the LEDnetWF smear
+      command (not yet distilled).
     justified_by: [family.elk_bledom, family.triones, family.sp110e, family.lednetwf]
   - id: decision.effects_out_of_scope
     text: Built-in vendor effects are exposed minimally or not at all;
