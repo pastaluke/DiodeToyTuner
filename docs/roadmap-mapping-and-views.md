@@ -1,9 +1,11 @@
 # Roadmap: mapping customization & value views
 
 Classified from the first hardware-verified field session (2026-07-07,
-LEDnetWF sunset lamp + gamepad). Status values: `planned` → `shipped` →
-`verified`. Each feature has acceptance criteria (AC) so any future session
-can pick it up cold.
+LEDnetWF sunset lamp + gamepad). F18+ classified from the second field
+session (2026-07-08 — F1–F17 confirmed working on hardware, white diode
+verified). Status values: `planned` → `shipped` → `verified`. Each
+feature has acceptance criteria (AC) so any future session can pick it
+up cold.
 
 ## F1 — Shareable configuration profiles (Steam-style) — shipped
 
@@ -85,7 +87,7 @@ Per channel, the user chooses how the value is presented:
 - AC2: The wheel shows the reachable color circle and never implies more
   resolution than the channel has (readout still shows step N/max).
 
-## F8 — LEDnetWF white channel — shipped (needs hardware verification)
+## F8 — LEDnetWF white channel — verified 2026-07-08 (brightness byte); temp byte does NOT change tint on the test lamp — see F19
 
 The verified sunset lamp has a dedicated white LED. Answer to "where is
 white in the current app": it was **not represented at all** — the hue
@@ -193,6 +195,135 @@ App splits into sections so users see only what they want: **Control**
   remembered.
 - AC2: Architecture allows sections to be added (Schedules) without
   restructuring — sections are render functions over shared state.
+
+## F18 — White ↔ color mode toggle with shared brightness — shipped
+
+Field feedback (2026-07-08): the only way to turn the white diode on was
+raising White brightness, which silently killed the color diodes — and
+the two modes kept separate brightness values, so toggling could jump
+from very dim to very bright.
+
+- AC1: LEDnetWF exposes a 2-step `White light` mode channel; the mode is
+  an explicit toggle, not a side effect of a brightness slider.
+- AC2: One shared `Brightness` value drives whichever mode is active and
+  is preserved across toggles (no brightness surprises).
+- AC3: The mode toggle is bindable to a controller button (existing
+  `toggle` binding kind — 2-step channels learn as toggles by default).
+- AC4: 2-step channels (Power, White light) render as labeled toggle
+  buttons, not sliders.
+
+## F19 — White temperature: field finding — recorded
+
+On the verified sunset lamp, the white temperature byte does NOT change
+tint — it only dims the lamp while white mode is on. Likely a
+single-temperature white emitter (the vendor payload byte may scale
+duty cycle on such units).
+
+- AC1: Channel info + notes say this honestly ("may only dim on
+  single-white hardware").
+- AC2: Knowledge graph white_payload entry carries the field
+  observation in the same commit.
+
+## F20 — Adopt device state on connect — shipped (LEDnetWF layout needs verification)
+
+The app opened with everything at 0, so the first slider touch stomped
+the lamp's real state to zero and caused flashing while tuning hue/sat.
+
+- AC1: Driver interface gains `readState()`; after identification the
+  app merges whatever the device reports into the shadow state WITHOUT
+  writing anything.
+- AC2: Triones parses its documented 12-byte status frame
+  (community-verified). SP110E parses GET_INFO (layout `reported`).
+  LEDnetWF parses the settings-query response (layout hypothesized
+  flux_led-style, `reported`) and surfaces the raw hex in the status
+  line so a hardware session can verify/correct it.
+- AC3: Families with no read-back keep defaults but never regress.
+
+## F21 — Friendly wording — shipped
+
+- AC1: "Value (brightness)" → "Brightness"; jargon lives behind ⓘ.
+- AC2: Labels across drivers reviewed for plain words (SP110E
+  "Brightness (true 256-step)" → "Brightness", etc.).
+
+## F22 — Diode panel: numbers + black at zero — shipped
+
+- AC1: Each diode in the pinnable bank shows its current power level as
+  a number (percent).
+- AC2: A diode at 0 renders as a black circle (clearly OFF), not a
+  faint translucent disc.
+
+## F23 — Pure-diode hash marks on hue controls — shipped
+
+- AC1: Small R/G/B marks sit at the hue positions where only one diode
+  conducts (0°, 120°, 240°) on the spectrum slider track and both
+  wheels.
+- AC2: Toggleable; preference saved in the profile.
+
+## F24 — Sub-step brightness (question answered — no code path)
+
+Hardware quantizes: the LEDnetWF lamp has exactly 101 brightness duty
+levels; there is nothing between step N and N+1 to send. The honest
+fix is hardware with more steps (SP110E: 256). Perceived low-end
+jumpiness is PWM-linear vs. eye-log; a gamma remap would spend steps
+differently but cannot create new ones. Recorded in Brightness ⓘ text.
+
+## F25 — Binding editor info icon — shipped
+
+- AC1: One ⓘ beside the kind dropdown explains every option (rotary /
+  rate / step / toggle / absolute / action) in one popover.
+
+## F26 — Controller diagram — shipped
+
+- AC1: A standard-mapping gamepad diagram renders above the bindings
+  list; controls that have assignments are highlighted and titled with
+  what they do.
+- AC2: Clicking a control highlights (and scrolls to) its binding rows
+  where step values / modifiers are edited.
+- AC3: Diagram is the standard Gamepad-API mapping — works for any
+  standard-mapping pad (Stadia, Xbox, DS4 in BT mode).
+
+## F27 — Freaky-slow animations — shipped
+
+- AC1: Sweep/breathe speed maps log-scale down to multi-minute cycles
+  (~30+ min per revolution at the floor) while keeping the old top end.
+- AC2: The UI shows the resulting cycle time so slow settings are
+  legible.
+
+## F28 — Palettes — shipped
+
+- AC1: "Save current color" appends the current hue/sat/brightness as a
+  swatch to the active palette; the action is assignable to a
+  controller button (new `action` binding kind).
+- AC2: Palettes have names, persist in localStorage, and are shareable:
+  Copy puts JSON on the clipboard, Import reads it back.
+- AC3: Palette list shows each palette's swatches as the row background
+  with text always readable in front.
+- AC4: The palette creation row is pinnable to top or bottom and stays
+  across tab navigation.
+
+## F29 — Palette lerp animation — shipped
+
+- AC1: New animation lerps hue/sat/brightness through the active
+  palette's swatches (hue takes the short way around the circle).
+- AC2: Transition style option: smooth crossfade, or fade brightness to
+  0 and back up on each new color.
+- AC3: Brightness override toggle: off = animate through each swatch's
+  stored brightness; on = a uniform brightness slider wins.
+
+## F30 — Schedules groundwork — shipped (client-side)
+
+- AC1: Schedules tab: named schedules with time nodes; each node is a
+  captured light setting ("add current light setting") or a palette
+  animation start; toggle on/off, copy, edit, delete.
+- AC2: A built-in template ships: bright white during the day, warm dim
+  color in the evening, computed in the user's local time zone —
+  copyable and editable.
+- AC3: A client-side runner applies the most recent due node while the
+  app is connected (checks every 30 s, applies once per node per day).
+- AC4: Device-side schedules (running with the app closed) require the
+  vendor timer/RTC commands — not yet reverse-engineered for any family;
+  recorded as a research TODO in the knowledge graph, and the UI says
+  honestly that schedules currently need the app connected.
 
 ## Principle P1 — Family-agnostic UI
 

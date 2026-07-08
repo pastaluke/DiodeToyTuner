@@ -75,6 +75,28 @@ export const sp110eDriver: Driver = {
     return resp.length === 12 ? 1.0 : 0.2;
   },
 
+  /** F20: adopt current device state from GET_INFO. Layout `reported`
+   *  (graph: protocol.sp110e get_info_response, from roslovets/SP110E):
+   *  [1]=power [4]=brightness [9..11]=r,g,b. Parsed defensively; raw hex
+   *  returned for field verification. */
+  async readState(io: ProbeIO): Promise<{ state: Partial<ChannelState>; raw?: string } | null> {
+    await io.write(cmd(0, 0, 0, CMD_GET_INFO));
+    const resp = await io.nextNotification(1500);
+    if (!resp) return null;
+    const raw = [...resp].map((b) => b.toString(16).padStart(2, "0")).join(" ");
+    if (resp.length !== 12) return { state: {}, raw };
+    return {
+      raw,
+      state: {
+        power: (resp[1] ?? 0) > 0 ? 1 : 0,
+        brightness: (resp[4] ?? 0) / 255,
+        r: (resp[9] ?? 0) / 255,
+        g: (resp[10] ?? 0) / 255,
+        b: (resp[11] ?? 0) / 255,
+      },
+    };
+  },
+
   describe(): DeviceCapability {
     return {
       family: "family.sp110e",
@@ -88,7 +110,7 @@ export const sp110eDriver: Driver = {
           info: "Green subpixel level (~525 nm), whole strip, 256 levels." },
         { id: "b", label: "Blue", kind: "b", steps: 256, wavelengthNm: 470,
           info: "Blue subpixel level (~470 nm), whole strip, 256 levels." },
-        { id: "brightness", label: "Brightness (true 256-step)", kind: "w", steps: 256,
+        { id: "brightness", label: "Brightness", kind: "w", steps: 256,
           info: "Global scaler the controller applies to every pixel's data — a real 256-step path, finer than most cheap gear." },
         { id: "w", label: "White diode (RGBW ICs only)", kind: "w", steps: 256,
           info: "Drives the dedicated white diode inside each pixel — only lights on RGBW ICs like SK6812 RGBW." },

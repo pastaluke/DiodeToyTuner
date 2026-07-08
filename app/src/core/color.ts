@@ -7,6 +7,22 @@ export interface Rgb {
   b: number;
 }
 
+/** r/g/b in [0,1] → h/s/v in [0,1] (state adoption on connect, F20). */
+export function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: number } {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d > 0) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+    if (h < 0) h += 1;
+  }
+  return { h, s: max === 0 ? 0 : d / max, v: max };
+}
+
 /** h, s, v all in [0,1] → r/g/b in [0,1]. */
 export function hsvToRgb(h: number, s: number, v: number): Rgb {
   const i = Math.floor(h * 6) % 6;

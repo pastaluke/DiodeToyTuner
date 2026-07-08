@@ -10,7 +10,10 @@
 export type ChannelKind =
   | "r" | "g" | "b" | "w" | "cw" | "ww"
   | "hue" | "sat" | "val"
-  | "power" | "pixel";
+  | "power" | "pixel"
+  /** 2-step selector between firmware-exclusive diode groups (F18),
+   *  e.g. LEDnetWF color↔white. Renders as a toggle, binds as toggle. */
+  | "mode";
 
 export interface Channel {
   /** Stable id, unique within the device, e.g. "r", "brightness". */

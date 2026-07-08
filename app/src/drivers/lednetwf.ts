@@ -15,6 +15,7 @@
  */
 import type { ChannelState, DeviceCapability } from "../core/types";
 import { toRange } from "../core/value";
+import { rgbToHsv } from "../core/color";
 import type { Driver, IdentityEvidence, ProbeIO } from "./driver";
 
 const SVC_FFFF = "0000ffff-0000-1000-8000-00805f9b34fb";
@@ -54,18 +55,19 @@ function hsvFrame(state: ChannelState): Uint8Array {
 }
 
 /**
- * White mode (dedicated white LED). Interpreted from the capture
- * `3b b1 00 00 00 1b 36 … 3d` (checksum-consistent): bytes 5/6 read as
- * temperature and brightness, both 0-100. Byte positions are a
- * hypothesis — knowledge-graph confidence `reported` until a lamp
- * confirms (roadmap F8 AC3).
+ * White mode (dedicated white LED). Brightness byte verified on hardware
+ * 2026-07-08 (F8). The temperature byte did NOT change tint on the test
+ * lamp — it only dimmed (observation.lednetwf_white_temp_dims_only);
+ * likely a single-temperature emitter there, so it stays exposed for CCT
+ * models but labeled honestly. Brightness is the SHARED `value` channel
+ * (F18 AC2): one brightness for both modes, preserved across toggles.
  */
 function whiteFrame(state: ChannelState): Uint8Array {
   return wrap(
     [
       0x3b, 0xb1, 0, 0, 0,
-      toRange(state["whiteTemp"] ?? 0.5, 100),
-      toRange(state["whiteBright"] ?? 0, 100),
+      toRange(state["whiteTemp"] ?? 0, 100),
+      toRange(state["value"] ?? 0, 100),
       0, 0, 0, 0, 0,
     ],
     0x0b,
@@ -111,20 +113,21 @@ export const lednetwfDriver: Driver = {
       channels: [
         { id: "power", label: "Power", kind: "power", steps: 2,
           info: "Master switch: cuts or restores drive current to every diode in the lamp." },
+        { id: "whiteMode", label: "White light", kind: "mode", steps: 2,
+          info: "Chooses which emitters run: OFF = the red/green/blue color diodes, ON = the dedicated white diode. The firmware forbids both at once. Brightness below is shared — it drives whichever side is active and is remembered across toggles. Bindable: learn a controller button and it toggles." },
         { id: "hue", label: "Hue", kind: "hue", steps: 180, cyclic: true, exclusiveGroup: "color",
           info: "Angle on the color circle — which blend of the red, green and blue diodes is driven. The controller mixes their PWM duty cycles to fake in-between colors. 180 real positions (2° each); wraps around, both ends are red." },
         { id: "saturation", label: "Saturation", kind: "sat", steps: 101, exclusiveGroup: "color",
           info: "Color purity: 100 = only the diodes for the chosen hue conduct; lower values blend all three diodes toward white. 101 real steps." },
-        { id: "value", label: "Value (brightness)", kind: "val", steps: 101, exclusiveGroup: "color",
-          info: "Overall duty cycle of the RGB diodes — the fraction of time they actually conduct each PWM period. 101 real steps; perceived brightness is nonlinear." },
-        { id: "whiteTemp", label: "White temp (warm→cool)", kind: "cw", steps: 101, exclusiveGroup: "white",
-          info: "Tint of the dedicated white LED from warm to cool (byte layout unverified — you're the test)." },
-        { id: "whiteBright", label: "White brightness", kind: "w", steps: 101, exclusiveGroup: "white",
-          info: "Duty cycle of the dedicated white diode. Anything above 0 switches the lamp to white mode and shuts off the RGB diodes; 0 returns to color." },
+        { id: "value", label: "Brightness", kind: "val", steps: 101,
+          info: "Duty cycle of the active diodes — the fraction of time they conduct each PWM period. Shared between color and white modes. 101 real hardware levels; there is nothing between two adjacent steps to send, and perceived brightness is nonlinear (low-end steps look bigger)." },
+        { id: "whiteTemp", label: "White warmth", kind: "cw", steps: 101, exclusiveGroup: "white",
+          info: "Meant to tint the white LED warm→cool on lamps with two white emitters. On the lamp we verified it does NOT change tint — it only dims while white mode is on (single-temperature white hardware). Leave it at 0 unless yours responds." },
       ],
       notes: [
-        "Native HSV device: hue has 180 real steps (stored as hue/2), saturation and value 101 each — shown honestly instead of a fake 8-bit RGB.",
-        "Dedicated white LED: White brightness > 0 switches the lamp to white mode; 0 returns to color. White byte layout is unverified — if it misbehaves, report what happened.",
+        "Native HSV device: hue has 180 real steps (stored as hue/2), saturation and brightness 101 each — shown honestly instead of a fake 8-bit RGB.",
+        "White light is a mode toggle (F18): color diodes and the white diode are firmware-exclusive; one shared Brightness drives whichever is active.",
+        "White warmth verified ineffective (dims only) on a single-white sunset lamp — kept for dual-white models.",
         "Effects and per-pixel smear exist on some firmware — not exposed yet; see the protocol compendium.",
       ],
     };
@@ -134,11 +137,51 @@ export const lednetwfDriver: Driver = {
     const on = (state["power"] ?? 1) >= 0.5;
     const frames: Uint8Array[] = [powerFrame(on)];
     if (on) {
-      // White and color are exclusive modes on this hardware: any white
-      // brightness engages the dedicated white LED, zero returns to HSV.
-      frames.push((state["whiteBright"] ?? 0) > 0 ? whiteFrame(state) : hsvFrame(state));
+      // Color and white are exclusive firmware modes; the explicit mode
+      // toggle picks the frame, shared `value` sets brightness for both.
+      frames.push((state["whiteMode"] ?? 0) >= 0.5 ? whiteFrame(state) : hsvFrame(state));
     }
     return frames;
+  },
+
+  /**
+   * F20: adopt current device state. Layout is HYPOTHESIZED flux_led-style
+   * (graph: protocol.lednetwf state_query_response, `reported`): the
+   * settings query is the Magic Home Wi-Fi state query verbatim, whose
+   * answer is 81 DT PW MD .. .. RR GG BB WW …. Ring-firmware units answer
+   * differently — parse defensively, always return raw hex so a hardware
+   * session can verify/correct the graph entry.
+   */
+  async readState(io: ProbeIO): Promise<{ state: Partial<ChannelState>; raw?: string } | null> {
+    await io.write(settingsQuery());
+    const resp = await io.nextNotification(1500);
+    if (!resp) return null;
+    const raw = [...resp].map((b) => b.toString(16).padStart(2, "0")).join(" ");
+    const state: Partial<ChannelState> = {};
+    // Locate an 0x81 header whose power byte is a known magic — the frame
+    // may or may not arrive inside the 8-byte transport wrapper.
+    for (let i = 0; i + 9 < resp.length; i++) {
+      if (resp[i] !== 0x81) continue;
+      const pw = resp[i + 2];
+      if (pw !== 0x23 && pw !== 0x24) continue;
+      state["power"] = pw === 0x23 ? 1 : 0;
+      const r = (resp[i + 6] ?? 0) / 255;
+      const g = (resp[i + 7] ?? 0) / 255;
+      const b = (resp[i + 8] ?? 0) / 255;
+      const w = (resp[i + 9] ?? 0) / 255;
+      if (w > 0) {
+        state["whiteMode"] = 1;
+        state["value"] = w;
+      } else if (r + g + b > 0) {
+        const hsv = rgbToHsv(r, g, b);
+        state["whiteMode"] = 0;
+        state["hue"] = hsv.h;
+        state["saturation"] = hsv.s;
+        state["value"] = hsv.v;
+      }
+      break;
+    }
+    return { state, raw };
   },
 
   blinkTest(state: ChannelState): [Uint8Array[], Uint8Array[]] {

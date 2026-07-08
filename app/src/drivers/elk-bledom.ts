@@ -76,8 +76,8 @@ export const elkBledomDriver: Driver = {
           info: "PWM duty cycle of the green diode rail (~525 nm). 256 levels." },
         { id: "b", label: "Blue", kind: "b", steps: 256, wavelengthNm: 470,
           info: "PWM duty cycle of the blue diode rail (~470 nm). 256 levels." },
-        { id: "brightness", label: "Brightness (coarse!)", kind: "w", steps: 101,
-          info: "A separate multiplier the firmware applies over all three rails — only 101 real steps. For max precision leave at 1.0 and drive R/G/B directly." },
+        { id: "brightness", label: "Brightness", kind: "w", steps: 101,
+          info: "A separate, coarse multiplier the firmware applies over all three rails — only 101 real steps. For max precision leave at 1.0 and drive R/G/B directly." },
       ],
       notes: [
         "Brightness is a separate 101-step multiplier — for max precision keep it at 1.0 and drive RGB directly.",

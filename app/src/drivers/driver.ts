@@ -53,6 +53,16 @@ export interface Driver {
    *  (decision.driver_post_connect_hook). */
   postConnect?(io: ProbeIO): Promise<void>;
 
+  /**
+   * F20: read the device's CURRENT state so the app adopts it instead of
+   * assuming zeros (which stomped real state on the first slider touch).
+   * Read-only; returns unit-interval channel values for whatever could be
+   * decoded (null / missing keys = unknown, keep defaults). `raw`, when
+   * present, is the undecoded response hex for field verification of
+   * layouts the graph marks `reported`.
+   */
+  readState?(io: ProbeIO): Promise<{ state: Partial<ChannelState>; raw?: string } | null>;
+
   describe(): DeviceCapability;
 
   /** Pure: full shadow state → protocol frames, in write order. */

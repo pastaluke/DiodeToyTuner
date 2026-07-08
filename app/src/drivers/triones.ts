@@ -44,6 +44,26 @@ export const trionesDriver: Driver = {
     return 0.2; // answered wrongly — actively suspicious
   },
 
+  /** F20: adopt current device state from the documented status frame
+   *  `66 ?? PW MD ?? ?? RR GG BB WW ?? 99` (community-verified). */
+  async readState(io: ProbeIO): Promise<{ state: Partial<ChannelState>; raw?: string } | null> {
+    await io.write(hex(0xef, 0x01, 0x77));
+    const resp = await io.nextNotification(1500);
+    if (!resp) return null;
+    const raw = [...resp].map((b) => b.toString(16).padStart(2, "0")).join(" ");
+    if (resp.length !== 12 || resp[0] !== 0x66 || resp[11] !== 0x99) return { state: {}, raw };
+    return {
+      raw,
+      state: {
+        power: resp[2] === 0x23 ? 1 : 0,
+        r: (resp[6] ?? 0) / 255,
+        g: (resp[7] ?? 0) / 255,
+        b: (resp[8] ?? 0) / 255,
+        w: (resp[9] ?? 0) / 255,
+      },
+    };
+  },
+
   describe(): DeviceCapability {
     return {
       family: "family.triones",

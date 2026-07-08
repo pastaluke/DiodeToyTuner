@@ -10,7 +10,7 @@
 # graph"). Never contradict this file silently; fix it in the same commit.
 
 meta:
-  updated: 2026-07-07
+  updated: 2026-07-08
   scope: >
     BLE LED controller families controllable from a web app, the platform
     APIs available to reach them and to read physical inputs, and the
@@ -200,7 +200,19 @@ entities:
       power_off_payload: "3b 24 00 00 00 00 00 00 00 32 00 00  # chk 0x91"
       hsv_payload:       "3b a1 HH SS VV 00 00 00 00 00 00 00"
       settings_query_payload: "81 8a 8b  # chk 0x96, cmdid 0x0a -> notification = identity probe"
-      white_payload: "3b b1 00 00 00 TT BB 00 00 00 00 00  # REPORTED: TT temp 0-100 warm->cool, BB bright 0-100; byte positions hypothesized from capture 3b b1 00 00 00 1b 36 .. 3d — verify per roadmap F8 AC3"
+      white_payload: "3b b1 00 00 00 TT BB 00 00 00 00 00  # BB bright 0-100
+        VERIFIED-BY-US 2026-07-08 (sunset lamp: white diode lights, brightness
+        tracks BB). TT does NOT change tint on that lamp — moving it only DIMS
+        while white mode is on; likely a single-temperature white emitter, TT
+        acting as a second duty scaler there. TT may still be temp on CCT
+        (dual-white) models — confidence for TT stays reported."
+      state_query_response: "response to settings_query on ff02; layout
+        HYPOTHESIZED flux_led-style (the 81 8a 8b query is the Magic Home
+        Wi-Fi state query verbatim): payload [0]=0x81 [1]=devtype
+        [2]=power(0x23/0x24) [3]=mode [6]=R [7]=G [8]=B [9]=W.
+        REPORTED — fw 0x53/0x56 ring variants are known to answer with
+        longer, different frames; app surfaces raw hex on connect so a
+        hardware session can verify/correct this entry."
       effect_payload:    "38 EE SS BB  # fw 0x53; effect 01-71, speed/bright 1-64"
     power_magic: {on: 0x23, off: 0x24}
     effects: 0x01-0x71 (fw 0x53) or 0x01-0x64 (fw 0x56)
@@ -227,6 +239,10 @@ entities:
       set_white: "WW 00 00 69"
       set_mode: "MM 00 00 2c    # 1-120 presets, 121 = static"
       get_info: "00 00 00 10    # -> 12-byte state notification"
+    get_info_response: "12 bytes; layout REPORTED from roslovets/SP110E:
+      [1]=power [2]=mode [3]=speed [4]=brightness [5]=ic_model [6]=rgb_seq
+      [7..8]=pixel_count [9..11]=r,g,b — verify against a live unit before
+      trusting bytes other than power/brightness"
       config_tier_dangerous: [set_ic_model 1c, set_rgb_seq 3c, set_led_num 2d]
     per_pixel: false
     confidence: community-verified
@@ -374,6 +390,21 @@ relations:
   - [protocol.lednetwf, shares_magic_numbers_with, protocol.triones]
 
 observations:
+  - id: observation.lednetwf_white_temp_dims_only
+    text: On the verified sunset lamp (LEDnetWF020027A5AE11, 2026-07-08)
+      the white payload temperature byte does not change tint — it only
+      dims while white mode is active. Brightness byte works as documented.
+      Hypothesis; single-temperature white emitter on this model. Keep the
+      channel for CCT models but label honestly.
+    doc: docs/roadmap-mapping-and-views.md (F19)
+  - id: observation.device_side_timers_not_distilled
+    text: Vendor apps (Magic Home / HappyLighting / LED Hue) expose on-device
+      timers/schedules that keep running with the phone away, which implies
+      RTC-set + timer-set commands exist in the BLE protocols. None are
+      distilled in our sources yet (flux_led implements them for the Wi-Fi
+      side only). Until captured, app schedules run client-side while
+      connected. Research TODO for a future capture session.
+    doc: docs/roadmap-mapping-and-views.md (F30 AC4)
   - id: observation.sunset_lamps_not_one_chip
     text: App-controlled sunset projection lamps are white-label BLE LED
       controllers behind a lens; they split across ELK-BLEDOM (Lotus

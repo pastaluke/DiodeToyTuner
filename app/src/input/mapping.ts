@@ -10,6 +10,8 @@
  *  - rotary:   stick pushed to its rim acts as an endless encoder —
  *              engaging the rim never jumps the value; only angular
  *              travel (CW/CCW) changes it
+ *  - action:   press fires an app action (channelId = action id, e.g.
+ *              "action.saveSwatch" — F28 AC1)
  * Modifiers (F3): held controls multiply a binding's speed.
  */
 
@@ -22,7 +24,7 @@ export interface InputEvent {
 }
 
 export type Curve = "linear" | "squared" | "cubed";
-export type BindingKind = "absolute" | "rate" | "step" | "rotary" | "toggle";
+export type BindingKind = "absolute" | "rate" | "step" | "rotary" | "toggle" | "action";
 
 export interface Modifier {
   controlKey: string;
@@ -96,6 +98,8 @@ export class MappingEngine {
     /** Hardware step count + cyclic flag for a channel (F9). */
     private readonly getChannelMeta: (channelId: string) => { steps: number; cyclic: boolean },
     private readonly onProfileChanged?: () => void,
+    /** Fires app actions bound to buttons (F28), e.g. "action.saveSwatch". */
+    private readonly onAction?: (actionId: string) => void,
   ) {}
 
   /** Cyclic channels wrap at the seam; others clamp (F9 AC1). */
@@ -189,6 +193,17 @@ export class MappingEngine {
           }
           break;
         }
+        case "action": {
+          // One press fires an app action (F28) — save swatch, etc.
+          const was = this.pressed.get(b) ?? false;
+          if (!was && ev.value > PRESS) {
+            this.pressed.set(b, true);
+            this.onAction?.(b.channelId);
+          } else if (was && ev.value < RELEASE) {
+            this.pressed.set(b, false);
+          }
+          break;
+        }
         case "rotary": {
           const x = this.raw.get(b.controlKey) ?? 0;
           const y = this.raw.get(b.controlKey2 ?? "") ?? 0;
@@ -247,7 +262,7 @@ function parseBinding(b: unknown): Binding {
   if (
     typeof o["controlKey"] !== "string" ||
     typeof o["channelId"] !== "string" ||
-    (kind !== "absolute" && kind !== "rate" && kind !== "step" && kind !== "rotary" && kind !== "toggle") ||
+    (kind !== "absolute" && kind !== "rate" && kind !== "step" && kind !== "rotary" && kind !== "toggle" && kind !== "action") ||
     (curve !== "linear" && curve !== "squared" && curve !== "cubed") ||
     (direction !== 1 && direction !== -1) ||
     typeof o["sensitivity"] !== "number" ||
