@@ -134,6 +134,97 @@ button.tiny { font-size: 0.75rem; padding: 0.15rem 0.4rem; }
   font-size: 0.8rem;
 }
 
+/* Tabs (F17) */
+.tabs { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+.tab { border-radius: 8px 8px 0 0; opacity: 0.7; }
+.tab.active { opacity: 1; border-color: var(--accent); font-weight: 600; }
+
+/* Hue spectrum slider track (F12) */
+input[type="range"].hue-track {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  border-radius: 8px;
+  background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+}
+input[type="range"].hue-track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #000;
+  cursor: pointer;
+}
+
+/* Combined 2D wheel (F14): hue angle, saturation radius, white center */
+.combined { background: var(--panel); border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 0.9rem; }
+.wheel-2d {
+  -webkit-mask: none;
+  mask: none;
+  background:
+    radial-gradient(circle, #fff 0%, rgba(255,255,255,0) 72%),
+    conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+}
+
+/* Info popover (F13) */
+.info-btn { border-radius: 50%; }
+.info-pop {
+  margin: 0.1rem 0 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  border-left: 3px solid var(--accent);
+  padding-left: 0.6rem;
+}
+
+/* Diode bank (F15) */
+.diode-bank {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  margin-top: 0.9rem;
+}
+.bank-label { color: var(--muted); font-size: 0.85rem; }
+.diode-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+.diode {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid #33334a;
+  transition: box-shadow 80ms linear, background 80ms linear;
+}
+.diode-name { font-size: 0.7rem; color: var(--muted); }
+.pin-btns { margin-left: auto; display: inline-flex; gap: 0.3rem; }
+.diode-bank.pinned {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  border-radius: 0;
+  justify-content: center;
+  background: rgba(16,16,20,0.92);
+  backdrop-filter: blur(4px);
+}
+.diode-bank.pin-top { top: 0; }
+.diode-bank.pin-bottom { bottom: 0; }
+
+/* Animations tab (F16) */
+.anim-row {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  margin-bottom: 0.4rem;
+}
+.anim-row input[type="range"] { flex: 1; }
+
 /* Portrait / narrow screens (F6) */
 @media (max-width: 700px) {
   #app { padding: 1rem 0.7rem 3rem; }

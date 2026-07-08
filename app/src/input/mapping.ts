@@ -22,7 +22,7 @@ export interface InputEvent {
 }
 
 export type Curve = "linear" | "squared" | "cubed";
-export type BindingKind = "absolute" | "rate" | "step" | "rotary";
+export type BindingKind = "absolute" | "rate" | "step" | "rotary" | "toggle";
 
 export interface Modifier {
   controlKey: string;
@@ -63,6 +63,11 @@ const ROTARY_ENGAGE_RADIUS = 0.55;
 const PRESS = 0.5;
 const RELEASE = 0.3;
 
+function wrap01(v: number): number {
+  const w = v % 1;
+  return w < 0 ? w + 1 : w;
+}
+
 function applyCurve(v: number, curve: Curve): number {
   const s = Math.sign(v);
   const a = Math.abs(v);
@@ -88,10 +93,16 @@ export class MappingEngine {
   constructor(
     private readonly setChannel: (channelId: string, value: number) => void,
     private readonly getChannel: (channelId: string) => number,
-    /** True hardware step count for a channel (for step bindings). */
-    private readonly getStepCount: (channelId: string) => number,
+    /** Hardware step count + cyclic flag for a channel (F9). */
+    private readonly getChannelMeta: (channelId: string) => { steps: number; cyclic: boolean },
     private readonly onProfileChanged?: () => void,
   ) {}
+
+  /** Cyclic channels wrap at the seam; others clamp (F9 AC1). */
+  private apply(channelId: string, next: number): void {
+    const meta = this.getChannelMeta(channelId);
+    this.setChannel(channelId, meta.cyclic ? wrap01(next) : clamp01(next));
+  }
 
   getProfile(): MappingProfile {
     return this.profile;
@@ -144,28 +155,35 @@ export class MappingEngine {
           if (ev.relative) {
             // Encoder detents: sensitivity = full-range units per detent.
             const delta = ev.value * b.direction * b.sensitivity * scale;
-            if (delta !== 0) {
-              this.setChannel(b.channelId, clamp01(this.getChannel(b.channelId) + delta));
-            }
+            if (delta !== 0) this.apply(b.channelId, this.getChannel(b.channelId) + delta);
             break;
           }
           let v = ev.value;
           if (Math.abs(v) < b.deadzone) break;
           v = applyCurve(v, b.curve);
           const delta = v * b.direction * b.sensitivity * scale * dtSeconds;
-          if (delta !== 0) {
-            this.setChannel(b.channelId, clamp01(this.getChannel(b.channelId) + delta));
-          }
+          if (delta !== 0) this.apply(b.channelId, this.getChannel(b.channelId) + delta);
           break;
         }
         case "step": {
           const was = this.pressed.get(b) ?? false;
           if (!was && ev.value > PRESS) {
             this.pressed.set(b, true);
-            const steps = Math.max(2, this.getStepCount(b.channelId));
+            const steps = Math.max(2, this.getChannelMeta(b.channelId).steps);
             const scale = this.modifierScale(b);
             const delta = (b.direction * b.sensitivity * scale) / (steps - 1);
-            this.setChannel(b.channelId, clamp01(this.getChannel(b.channelId) + delta));
+            this.apply(b.channelId, this.getChannel(b.channelId) + delta);
+          } else if (was && ev.value < RELEASE) {
+            this.pressed.set(b, false);
+          }
+          break;
+        }
+        case "toggle": {
+          // One press flips a binary channel (F10) — power on Start, etc.
+          const was = this.pressed.get(b) ?? false;
+          if (!was && ev.value > PRESS) {
+            this.pressed.set(b, true);
+            this.setChannel(b.channelId, this.getChannel(b.channelId) >= 0.5 ? 0 : 1);
           } else if (was && ev.value < RELEASE) {
             this.pressed.set(b, false);
           }
@@ -187,9 +205,7 @@ export class MappingEngine {
               const revolutions = Math.max(0.05, b.sensitivity);
               const delta =
                 (d / (2 * Math.PI)) * (b.direction / revolutions) * this.modifierScale(b);
-              if (delta !== 0) {
-                this.setChannel(b.channelId, clamp01(this.getChannel(b.channelId) + delta));
-              }
+              if (delta !== 0) this.apply(b.channelId, this.getChannel(b.channelId) + delta);
             }
             st.engaged = true;
             st.angle = angle;
@@ -231,7 +247,7 @@ function parseBinding(b: unknown): Binding {
   if (
     typeof o["controlKey"] !== "string" ||
     typeof o["channelId"] !== "string" ||
-    (kind !== "absolute" && kind !== "rate" && kind !== "step" && kind !== "rotary") ||
+    (kind !== "absolute" && kind !== "rate" && kind !== "step" && kind !== "rotary" && kind !== "toggle") ||
     (curve !== "linear" && curve !== "squared" && curve !== "cubed") ||
     (direction !== 1 && direction !== -1) ||
     typeof o["sensitivity"] !== "number" ||

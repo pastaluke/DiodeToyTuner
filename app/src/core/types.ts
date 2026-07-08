@@ -29,6 +29,10 @@ export interface Channel {
   exclusiveGroup?: string;
   /** Approximate dominant wavelength, when meaningful (the "wavelength room"). */
   wavelengthNm?: number;
+  /** F9: value space wraps — 0 and 1 are one step apart (hue). */
+  cyclic?: boolean;
+  /** F13: what this knob does, high level down to the physical diode. */
+  info?: string;
 }
 
 export interface DeviceCapability {
